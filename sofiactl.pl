@@ -17,6 +17,7 @@
 # vendor sdk: https://github.com/mondwan/cpp-surveillance-cli
 # vendor: http://www.xiongmaitech.com
 # vendor specifications: http://wiki.xm030.com:81/
+# password hashing: https://github.com/tothi/pwn-hisilicon-dvr
 
 package IPcam;
 use Module::Load::Conditional qw[can_load check_install requires];
@@ -26,6 +27,7 @@ my $use_list = {
             'Time::Local'       => undef,
             JSON              => undef,
             'Data::Dumper'      => undef,
+			'Digest::MD5'       => undef,
 };
 
 if (!can_load( modules => $use_list, autoload => true )) {
@@ -235,6 +237,8 @@ sub _init {
   $self->{GenericInfo} = undef;
   $self->{lastcommand} = undef;
   $self->{sequence} = 0;
+  $self->{hashtype} = 'plain';
+  $self->{debug} = 0;
 
   if (@_) {
    my %extra = @_;
@@ -346,8 +350,10 @@ sub GetReplyHead {
  
  
  $self->{sequence} = $reply_head->{Sequence};
-
- printf("reply: head_flag=%x version=%d session=0x%x sequence=%d channel=%d end_flag=%d msgid=%d size = %d lastcommand = %s\n", $head_flag, $version, $sid, $seq, $channel, $end_flag, $msgid, $size, $self->{lastcommand});
+ 
+ if ($self->{debug} ne 0) { 
+   printf("reply: head_flag=%x version=%d session=0x%x sequence=%d channel=%d end_flag=%d msgid=%d size = %d lastcommand = %s\n", $head_flag, $version, $sid, $seq, $channel, $end_flag, $msgid, $size, $self->{lastcommand});
+ }
  return $reply_head;
 }
 
@@ -439,6 +445,72 @@ sub PrepareGenericDownloadCommand {
   return 1;
 }
 
+sub md5basedHash {
+  my $self = shift;
+  my $message = $_[0];
+  my $hash = '';
+  
+  use Digest::MD5 qw(md5 md5_hex);
+  
+  my $msg_md5 = md5($message);
+  
+  if ($self->{debug} ne 0) {  
+    print md5_hex($message) . "\n";
+  }
+  
+  my @hash = unpack('C*', $msg_md5);
+  
+  if ($self->{debug} ne 0) {  
+    for my $chr (@hash) {
+      print sprintf("%02x ", $chr);
+    }
+	
+    print "\n";
+  }
+
+  for (my $i = 0; $i < 8; $i++) {
+    my $n = ($hash[2 * $i] + $hash[2 * $i + 1]) % 0x3e;
+   
+    if ($n > 9) {
+      if ($n > 35) {
+        $n += 61;
+      } else {
+        $n += 55;
+      }
+    } else {
+      $n += 0x30;
+    }
+	
+	if ($self->{debug} ne 0) {  
+      print "$n\n";
+	}
+	
+	$hash .= chr($n);
+  }
+  
+  if ($self->{debug} ne 0) {  
+    print "hash = $hash\n";
+  }
+  
+  return $hash;
+}
+
+sub plainHash {
+  my $self = shift;
+  my $message = $_[0];
+  return $message;
+}
+
+sub MakeHash {
+  my $self = shift;
+  my $message = $_[0];
+  my $hash = '';
+  
+  my $hashfunc = $self->{hashtype} . "Hash";
+  
+  return $hashfunc->($self, $message);
+}
+
 sub CmdLogin {
   my $self = shift;
 
@@ -446,7 +518,7 @@ sub CmdLogin {
   my $pkt = {
     EncryptType => "MD5", 
     LoginType => "DVRIP-Web", 
-    PassWord => $self->{password},
+    PassWord => $self->MakeHash($self->{password}),
     UserName => $self->{user}
 
   };
@@ -899,6 +971,8 @@ my $cfgPass = "";
 my $cfgHost = "";
 my $cfgPort = "";
 my $cfgCmd = undef;
+my $cfgHashType = "plain";
+my $cfgDebug = 0;
 
 
 my $help = 0;
@@ -911,6 +985,8 @@ my  $result = GetOptions (
  "host|hst=s" => \$cfgHost,
  "port|prt=s" => \$cfgPort,
  "command|cmd|c=s" => \$cfgCmd,
+ "hashtype|ht=s" => \$cfgHashType,
+ "debug|d" => \$cfgDebug,
 );
  
   
@@ -919,6 +995,7 @@ pod2usage(1) if ($help);
 
 if (!($cfgHost or $cfgPort or $cfgUser)) {
 	print STDERR "You must set user, host and port!\n";
+	pod2usage(1);
 	exit(0);
 }
 my $socket = IO::Socket::INET->new(
@@ -931,10 +1008,10 @@ my $socket = IO::Socket::INET->new(
 ) or die "Error at line " . __LINE__. ": $!\n";
 
 
-print "Setting clock for: host = $cfgHost port = $cfgPort\n";
+print "Connecting to: host = $cfgHost port = $cfgPort\n";
 
  
-my $dvr = IPcam->new(host => $cfgHost, port => $cfgPort, user => $cfgUser, password => $cfgPass, socket => $socket);
+my $dvr = IPcam->new(host => $cfgHost, port => $cfgPort, user => $cfgUser, password => $cfgPass, hashtype => $cfgHashType, debug => $cfgDebug, socket => $socket);
  
 my $savePath = '/tmp';
  
@@ -949,14 +1026,6 @@ $aliveInterval = $decoded->{'AliveInterval'};
 print sprintf("SessionID = 0x%08x\n",$dvr->{sid});
 print sprintf("AliveInterval = %d\n",$aliveInterval);
 
-my $decoded = $dvr->CmdSystemInfo();
-print Dumper $dvr->{GenericInfo};
-print Dumper $dvr->getSystemInfo();
- 
-print "System running:" . $dvr->getDeviceRuntime() ."\n";
-
-
-
 if ($cfgCmd eq "OPTimeSetting") {
  $decoded = $dvr->CmdOPTimeSetting(1);
  $decoded = $dvr->CmdOPTimeSetting();
@@ -964,14 +1033,37 @@ if ($cfgCmd eq "OPTimeSetting") {
  $decoded = $dvr->CmdUsers();
 } elsif ($cfgCmd eq "Groups") {
  $decoded = $dvr->CmdGroups();
+} elsif ($cfgCmd eq "SystemInfo") {
+  my $decoded = $dvr->CmdSystemInfo();
+  print Dumper $dvr->{GenericInfo};
+  print Dumper $dvr->getSystemInfo();
+ 
+  print "System running:" . $dvr->getDeviceRuntime() ."\n";
 } elsif ($cfgCmd eq "StorageInfo") {
  $decoded = $dvr->CmdStorageInfo();
 } elsif ($cfgCmd eq "WorkState") {
   $decoded = $dvr->CmdWorkState();
 } elsif ($cfgCmd eq "LogExport") {
- $decoded = $dvr->LogExport($cfgFile);
+  my $filename = $cfgFile;
+  
+  if ($filename eq "") {
+    $filename = "logs.zip";
+  } elsif ($filename !~ /\.zip$/) {
+    $filename .= ".zip";
+  }
+  
+  $decoded = $dvr->LogExport($filename);
+ 
 } elsif ($cfgCmd eq "ConfigExport") {
- $decoded = $dvr->ConfigExport($cfgFile);
+  my $filename = $cfgFile;
+  
+  if ($filename eq "") {
+    $filename = "configs.zip";
+  } elsif ($filename !~ /\.zip$/) {
+    $filename .= ".zip";
+  }
+  
+  $decoded = $dvr->ConfigExport($cfgFile);
 } elsif ($cfgCmd eq "OEMInfo") {
  $decoded = $dvr->CmdOEMInfo();
 } elsif ($cfgCmd eq "OPStorageManagerClear") {
@@ -1077,7 +1169,7 @@ __END__
 
 =head1 NAME
 
-./sofiactl.pl - utility for working with nvr data
+./sofiactl.pl - utility for working with Hi35xx Sofia powered DVR/NVR
 
 =head1 SYNOPSIS
 
@@ -1097,29 +1189,37 @@ Path to output file filename.
 
 =item B<-u>
 
-username
+Username
 
 =item B<-p>
 
-password
+Password
+
+=item N<-hashtype>
+
+Hash type. "plain" - password hash as-is (plain text, default), "md5based" - md5 based hash calculation (modified md5)
 
 =item B<-host>
 
-nvr hostname or ip address
+DVR/NVR hostname or ip address
 
 =item B<-port>
 
-nvr CMS port
+DVR/NVR CMS port
 
 =item B<-c>
 
-nvr command: OPTimeSetting, Users, Groups, WorkState, StorageInfo, OEMInfo, LogExport, ConfigExport, OPStorageManagerClear
+DVR/NVR command: OPTimeSetting, Users, Groups, WorkState, StorageInfo, SystemInfo, OEMInfo, LogExport, ConfigExport, OPStorageManagerClear
+
+=item B<-d>
+
+Debug output
 
 =back
 
 =head1 DESCRIPTION
 
-B<This program> can control the NVR.
+B<This program> can control the Hi35xx Sofia powered DVR/NVR.
 
 =cut
 
