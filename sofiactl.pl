@@ -385,6 +385,53 @@ sub getSystemInfo {
   return $self->{SystemInfo};
 }
 
+sub VersionInfo {
+  my $self = shift;
+  
+  my $versionstr = $_[0];
+
+  $versionstr =~ /V(\d+)\.(\d{2})\.([A-Z][0-9]+)\.(\d{8})\.(\d{5})/;
+  
+  my $platform = {
+    0 => "TI",
+    1 => "Hisilicon 16M",
+	2 => "Hisilicon 8M (S38)",
+	3 => "TI (_S models)",
+	4 => "Ambarella",
+	5 => "Hisilicon 16M",
+	6 => "Hisilicon 9M (Hi3518E)",
+  };
+  
+  $ver = {
+    major => $1,
+	minor => int($2),
+	release => $3,
+	oeminfo => $4,
+	build_options => $5,
+  };
+
+  $ver->{oeminfo} =~ /^(\d{3})(\d{2})(\d{3})/;
+  
+  $ver->{oem_manufacturer_id} = $1;
+  $ver->{platform_id} = int($2);
+  $ver->{build_number} = int($3);
+  
+  $ver->{build_options} =~ /^(\d)(\d)(\d)(\d)(\d)/;
+  
+  $ver->{cloud_service} = $1;
+  $ver->{basic_video_analytics} = $2;
+  $ver->{advanced_video_analytics} = $3;
+  $ver->{onvif_server_ipc} = $4;
+  $ver->{onvif_client_nvr} = $5;
+  
+  my $platform_id = $ver->{platform_id};
+  
+  $ver->{platform} = $platform->{$platform_id};
+
+  return %$ver;
+};
+
+
 sub PrepareGenericCommandHead {
   my $self = shift;
   my $msgid = $_[0];
