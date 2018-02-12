@@ -1019,6 +1019,18 @@ sub CmdOPStorageManager {
   return $self->PrepareGenericCommand(DISKMANAGER_REQ, $pkt);
 }
 
+sub CmdConfigGet {
+  my $self = shift;
+  my $parameters = $_[0];
+  
+  my $pkt = {
+    Name => $parameters,
+  };
+
+  return $self->PrepareGenericCommand(CONFIG_GET, $pkt);
+}
+
+
 
 package main;
 use IO::Socket;
@@ -1042,6 +1054,7 @@ my $cfgBeginTime = '';
 my $cfgEndTime = '';
 my $cfgDownload = 0;
 my $cfgQueryFile = '';
+my $cfgOption = '';
 
 my $help = 0;
 
@@ -1059,6 +1072,7 @@ my  $result = GetOptions (
  "endtime|et=s" => \$cfgEndTime,
  "download|dl" => \$cfgDownload,
  "queryfile|qf=s" => \$cfgQueryFile, 
+ "configoption|co=s" => \$cfgOption,
  "debug|d" => \$cfgDebug,
 );
  
@@ -1237,7 +1251,7 @@ if ($cfgCmd eq "OPTimeSetting") {
   my $cfgBeginTime = $dvr->ParseTimestamp($cfgBeginTime);
   my $cfgEndTime = $dvr->ParseTimestamp($cfgEndTime);
   
-  my $decoded = $dvr->CmdOPPlayBack({
+  $decoded = $dvr->CmdOPPlayBack({
       Action => "DownloadStart",
       StartTime => $cfgBeginTime,
 	  EndTime => $cfgEndTime,
@@ -1248,6 +1262,8 @@ if ($cfgCmd eq "OPTimeSetting") {
 	      Value => 0
       }
   });
+} elsif ($cfgCmd eq "ConfigGet") {
+  $decoded = $dvr->CmdConfigGet($cfgOption);
 }
 
 print Dumper $decoded;
@@ -1363,7 +1379,7 @@ DVR/NVR CMS port
 
 =item B<-c>
 
-DVR/NVR command: OPTimeSetting, Users, Groups, WorkState, StorageInfo, SystemInfo, OEMInfo, LogExport, ConfigExport, OPStorageManagerClear
+DVR/NVR command: OPTimeSetting, Users, Groups, WorkState, StorageInfo, SystemInfo, OEMInfo, LogExport, ConfigExport, OPStorageManagerClear, OPFileQuery
 
 =item B<-bt>
 
@@ -1380,6 +1396,10 @@ Download found files
 =item B<-ch>
 
 Channel number
+
+=item N<-co>
+
+Config option: General.General, General.Location, AVEnc.EncodeStaticParam, Simplify.Encode, AVEnc.CombineEncode, AVEnc.CombineEncodeParam, Uart.Comm
 
 =item B<-d>
 

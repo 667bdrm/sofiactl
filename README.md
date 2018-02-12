@@ -25,6 +25,7 @@ OPStorageManagerClear | Format storage (remove all recording)
 OPStorageManagerRO | Switch partition 0 to read-only mode (not tested!)
 OPStorageManagerRW | Switch partition 0 to read/write mode (not tested!)
 OPFileQuery | Search records. Requires --bt, --et, --ch parameters
+ConfigGet | Get configuration of specified by --co parameter section
 
 parameters:
 
@@ -40,6 +41,7 @@ parameters:
 --bt | Search begin time, ISO 8601 format (example: 2018-01-29T17:00:00Z)
 --et | Search end time, ISO 8601 format
 --ch | Channel
+--co | Config option. One of General.General, General.Location, AVEnc.EncodeStaticParam, Simplify.Encode, AVEnc.CombineEncode, AVEnc.CombineEncodeParam, Uart.Comm
 --dl | Download found files
 --c | DVR/NVR command: OPTimeSetting, Users, Groups, WorkState, StorageInfo, SystemInfo, OEMInfo, LogExport, ConfigExport, OPStorageManagerClear
 --d | Debug output
@@ -51,7 +53,7 @@ parameters:
 
 [IP Camera PBFZ TCV-UTH200](http://www.aliexpress.com/item/Free-shipping-2014-NEW-IP-camera-CCTV-2-0MP-HD-1080P-IP-Network-Security-CCTV-Waterproof/1958962188.html) (XiongMai, Hi3518, 50H20L_S39)
 
-[SANNCE 4CH 1080P PoE NVR](https://www.amazon.co.uk/gp/product/B017DCMB22) (XiongMai, NBD6904T-F) --hashtype md5based
+[SANNCE 4CH 1080P PoE NVR](https://www.amazon.co.uk/gp/product/B017DCMB22) (XiongMai, NBD6904T-F)
 
 ## Author and License
 
