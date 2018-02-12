@@ -19,11 +19,12 @@ SystemInfo | Get system info
 StorageInfo | Get storage info
 OEMInfo | Get OEM info
 WorkState | Get work state
-LogExport | Download logs to the output file specified by --of paramater
-ConfigExport | Download configuration files to the output file specified by --of paramater
+LogExport | Download logs to the output file specified by --of parameter
+ConfigExport | Download configuration files to the output file specified by --of parameter
 OPStorageManagerClear | Format storage (remove all recording)
 OPStorageManagerRO | Switch partition 0 to read-only mode (not tested!)
 OPStorageManagerRW | Switch partition 0 to read/write mode (not tested!)
+OPFileQuery | Search records. Requires --bt, --et, --ch parameters
 
 parameters:
 
@@ -33,9 +34,13 @@ parameters:
 --of | Path to output file filename
 --user | Username
 --pass | Password
---hashtype | Hash type. "plain" - password hash as-is (plain text, default), "md5based" - md5 based hash calculation (modified md5)
+--hashtype | Hash type. "md5based" - md5 based hash calculation (modified md5, default), "plain" - password hash as-is (plain text) 
 --host | DVR/NVR hostname or ip address
 --port | DVR/NVR CMS port
+--bt | Search begin time, ISO 8601 format (example: 2018-01-29T17:00:00Z)
+--et | Search end time, ISO 8601 format
+--ch | Channel
+--dl | Download found files
 --c | DVR/NVR command: OPTimeSetting, Users, Groups, WorkState, StorageInfo, SystemInfo, OEMInfo, LogExport, ConfigExport, OPStorageManagerClear
 --d | Debug output
 
@@ -46,9 +51,11 @@ parameters:
 
 [IP Camera PBFZ TCV-UTH200](http://www.aliexpress.com/item/Free-shipping-2014-NEW-IP-camera-CCTV-2-0MP-HD-1080P-IP-Network-Security-CCTV-Waterproof/1958962188.html) (XiongMai, Hi3518, 50H20L_S39)
 
+[SANNCE 4CH 1080P PoE NVR](https://www.amazon.co.uk/gp/product/B017DCMB22) (XiongMai, NBD6904T-F) --hashtype md5based
+
 ## Author and License
 
-Copyright (C) 2018 667bdrm
+Copyright (C) 2014-2018 667bdrm
 
 Dual licensed under GNU General Public License 2 and commercial license
 

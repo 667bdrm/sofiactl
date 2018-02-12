@@ -237,9 +237,12 @@ sub _init {
   $self->{GenericInfo} = undef;
   $self->{lastcommand} = undef;
   $self->{sequence} = 0;
-  $self->{hashtype} = 'plain';
+  $self->{hashtype} = 'md5based';
   $self->{debug} = 0;
-
+  $self->{channel} = 0;
+  $self->{begin_time} = '';
+  $self->{end_time} = '';
+  
   if (@_) {
    my %extra = @_;
    @$self{keys %extra} = values %extra;
@@ -276,7 +279,13 @@ sub getDeviceRuntime {
 
 sub BuildPacketSid {
   my $self = shift;
-  return sprintf("0x%08x",$self->{sid});
+  return $self->FormatHex($self->{sid});
+}
+
+sub FormatHex {
+  my $self = shift;
+  my $value = $_[0];
+  return sprintf("0x%08x",$value);
 }
 
 sub BuildPacket {
@@ -556,6 +565,14 @@ sub MakeHash {
   my $hashfunc = $self->{hashtype} . "Hash";
   
   return $hashfunc->($self, $message);
+}
+
+sub ParseTimestamp {
+  my $self = shift;
+  my $timestamp = $_[0];
+  $timestamp =~ s/T/ /; 
+  $timestamp =~ s/Z//;
+  return $timestamp;
 }
 
 sub CmdLogin {
@@ -1018,9 +1035,13 @@ my $cfgPass = "";
 my $cfgHost = "";
 my $cfgPort = "";
 my $cfgCmd = undef;
-my $cfgHashType = "plain";
+my $cfgHashType = "md5based";
 my $cfgDebug = 0;
-
+my $cfgChannel = 0;
+my $cfgBeginTime = '';
+my $cfgEndTime = '';
+my $cfgDownload = 0;
+my $cfgQueryFile = '';
 
 my $help = 0;
 
@@ -1033,6 +1054,11 @@ my  $result = GetOptions (
  "port|prt=s" => \$cfgPort,
  "command|cmd|c=s" => \$cfgCmd,
  "hashtype|ht=s" => \$cfgHashType,
+ "channel|ch=s" => \$cfgChannel,
+ "begintime|bt=s" => \$cfgBeginTime,
+ "endtime|et=s" => \$cfgEndTime,
+ "download|dl" => \$cfgDownload,
+ "queryfile|qf=s" => \$cfgQueryFile, 
  "debug|d" => \$cfgDebug,
 );
  
@@ -1058,7 +1084,7 @@ my $socket = IO::Socket::INET->new(
 print "Connecting to: host = $cfgHost port = $cfgPort\n";
 
  
-my $dvr = IPcam->new(host => $cfgHost, port => $cfgPort, user => $cfgUser, password => $cfgPass, hashtype => $cfgHashType, debug => $cfgDebug, socket => $socket);
+my $dvr = IPcam->new(host => $cfgHost, port => $cfgPort, user => $cfgUser, password => $cfgPass, hashtype => $cfgHashType, debug => $cfgDebug, channel => $cfgChannel, socket => $socket);
  
 my $savePath = '/tmp';
  
@@ -1073,6 +1099,11 @@ $aliveInterval = $decoded->{'AliveInterval'};
 print sprintf("SessionID = 0x%08x\n",$dvr->{sid});
 print sprintf("AliveInterval = %d\n",$aliveInterval);
 
+if ($dvr->{sid} eq 0) {
+  print "Cannot connect\n";
+  exit(0);
+}
+
 if ($cfgCmd eq "OPTimeSetting") {
  $decoded = $dvr->CmdOPTimeSetting(1);
  $decoded = $dvr->CmdOPTimeSetting();
@@ -1084,8 +1115,17 @@ if ($cfgCmd eq "OPTimeSetting") {
   my $decoded = $dvr->CmdSystemInfo();
   print Dumper $dvr->{GenericInfo};
   print Dumper $dvr->getSystemInfo();
- 
-  print "System running:" . $dvr->getDeviceRuntime() ."\n";
+
+  print "System running:" . $dvr->getDeviceRuntime() ."\n\n";
+  
+  print "Build info:\n\n";
+
+  my %versioninfo = $dvr->VersionInfo($dvr->{SystemInfo}{SoftWareVersion});
+
+  foreach my $k (keys %versioninfo) {
+    print "$k = " . $versioninfo{$k} . "\n";
+  }
+  
 } elsif ($cfgCmd eq "StorageInfo") {
  $decoded = $dvr->CmdStorageInfo();
 } elsif ($cfgCmd eq "WorkState") {
@@ -1147,23 +1187,73 @@ if ($cfgCmd eq "OPTimeSetting") {
      SerialNo => 0,
      Type => "ReadOnly",
  });
+} elsif ($cfgCmd eq "OPFileQuery") {
+
+  $cfgBeginTime = $dvr->ParseTimestamp($cfgBeginTime);
+  $cfgEndTime = $dvr->ParseTimestamp($cfgEndTime);
+  
+  if ($dvr->{debug} ne 0) {  
+    print "begin_time = '$cfgBeginTime' end_time = '$cfgEndTime' channel = '$cfgChannel'\n";
+  }
+  
+  #my $decoded = $dvr->CmdSystemFunction();
+	  
+  my $decoded = $dvr->CmdOPFileQuery({
+      BeginTime => $cfgBeginTime,
+      EndTime => $cfgEndTime,
+      Channel => int($cfgChannel),
+      # search all channels instead of single
+      #HighChannel => 0,
+      #LowChannel => 255,
+      DriverTypeMask => "0x0000FFFF",
+      Event => "*", # * - All; A - Alarm; M - Motion Detect; R - General; H - Manual; 
+      Type => "h264" #h264 or jpg
+  });
+  
+  
+  
+  if (defined($decoded->{'OPFileQuery'})) {
+	
+	my $results_ref = $decoded->{'OPFileQuery'};
+	
+    if ($dvr->{debug} ne 0) {  
+      print Dumper $results_ref;	
+	}
+	
+	#my @results = $results_ref;
+	
+	foreach my $result (@$results_ref) {
+
+	   
+	   $result->{'FileLength'} = hex($result->{'FileLength'});
+	   
+	   print Dumper $result;
+	}
+  }
+  
+  
+} elsif ($cfgCmd eq "Download") {
+
+  my $cfgBeginTime = $dvr->ParseTimestamp($cfgBeginTime);
+  my $cfgEndTime = $dvr->ParseTimestamp($cfgEndTime);
+  
+  my $decoded = $dvr->CmdOPPlayBack({
+      Action => "DownloadStart",
+      StartTime => $cfgBeginTime,
+	  EndTime => $cfgEndTime,
+      Parameter => {
+	      FileName => $cfgQueryFile,
+	      PlayMode => "ByName", 
+	      TransMode => "TCP",
+	      Value => 0
+      }
+  });
 }
 
 print Dumper $decoded;
 
 #my $decoded = $dvr->CmdSystemFunction();
 
-#my $decoded = $dvr->CmdOPFileQuery({
-#      BeginTime => "2016-07-01 22:00:00",
-#      EndTime => "2016-07-01 23:59:59",
-#      Channel => 1,
-#      # search all channels instead of single
-#      #HighChannel => 0,
-#      #LowChannel => 255,
-#      DriverTypeMask => "0x0000FFFF",
-#      Event => "*", # * - All; A - Alarm; M - Motion Detect; R - General; H - Manual; 
-#      Type => "h264" #h264 or jpg
-#});
 
 #my $decoded = $dvr->CmdOPPlayBack({
 #      Action => "Claim",
@@ -1176,6 +1266,23 @@ print Dumper $decoded;
 #	Value => 0
 #      }
 #});
+
+
+#{ "Name" : "OPPlayBack", 
+
+#  "OPPlayBack" : { 
+#    "Action" : "DownloadStart", 
+#	"EndTime" : "2018-01-29 21:51:08", 
+#	"Parameter" : { 
+#	  "FileName" : "/idea0/2018-01-29/001/21.00.00-22.00.00[M][@5f467][4].h264", 
+#	  "PlayMode" : "ByName", 
+#	  "TransMode" : "TCP", 
+#	  "Value" : 0 
+#	 }, 
+#	 "StartTime" : "2018-01-29 21:00:00" 
+#  }, 
+#  "SessionID" : "0x36" 
+#}
 
 my $decoded = $dvr->CmdAlarmInfo({
      Channel => 0,
@@ -1244,7 +1351,7 @@ Password
 
 =item N<-hashtype>
 
-Hash type. "plain" - password hash as-is (plain text, default), "md5based" - md5 based hash calculation (modified md5)
+Hash type. "md5based" - md5 based hash calculation (modified md5, default), "plain" - use password hash as-is (plain text)
 
 =item B<-host>
 
@@ -1257,6 +1364,22 @@ DVR/NVR CMS port
 =item B<-c>
 
 DVR/NVR command: OPTimeSetting, Users, Groups, WorkState, StorageInfo, SystemInfo, OEMInfo, LogExport, ConfigExport, OPStorageManagerClear
+
+=item B<-bt>
+
+Search begin time
+
+=item B<-et>
+
+Search end time
+
+=item B<-dl>
+
+Download found files
+
+=item B<-ch>
+
+Channel number
 
 =item B<-d>
 
