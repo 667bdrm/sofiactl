@@ -483,6 +483,24 @@ sub PrepareGenericCommand {
   return undef;
 }
 
+
+sub WriteDataToFile {
+  my $self = shift;
+  my $filename = $_[0];
+  my $extension = $_[1];
+  my $data = $_[2];
+ 
+  if ($filename eq "") {
+    $filename = "data.$extension";
+  } elsif ($filename !~ /\.$extension$/) {
+    $filename .= ".$extension";
+  }
+  
+  open(OUT, "> $filename");
+  print OUT $data;
+  close(OUT);
+}
+
 sub PrepareGenericDownloadCommand {
   my $self = shift;
   my $msgid = $_[0];
@@ -1268,21 +1286,22 @@ if ($cfgCmd eq "OPTimeSetting") {
   $decoded = $dvr->CmdConfigGet($cfgOption);
   
   if ($cfgFile ne "") {
-    my $filename = $cfgFile;
-  
-    if ($filename eq "") {
-      $filename = "config.json";
-    } elsif ($filename !~ /\.json$/) {
-      $filename .= ".json";
-    }
 	my $json = JSON->new;
-	
-	
-	open(OUT, "> $filename");
-	print OUT $json->encode($decoded->{$cfgOption});
-	close(OUT);
+
+    $dvr->WriteDataToFile($cfgFile, "json", $json->encode($decoded->{$cfgOption}));
+
+  }
+} elsif ($cfgCmd eq "ConfigGet") {
+  $decoded = $dvr->CmdConfigGet($cfgOption);
+  
+  if ($cfgFile ne "") {
+	my $json = JSON->new;
+
+    $dvr->WriteDataToFile($cfgFile, "json", $json->encode($decoded->{$cfgOption}));
+
   }
 }
+
 
 print Dumper $decoded;
 
