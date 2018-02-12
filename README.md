@@ -41,7 +41,7 @@ parameters:
 --bt | Search begin time, ISO 8601 format (example: 2018-01-29T17:00:00Z)
 --et | Search end time, ISO 8601 format
 --ch | Channel
---co | Config option. One of General.General, General.Location, AVEnc.EncodeStaticParam, Simplify.Encode, AVEnc.CombineEncode, AVEnc.CombineEncodeParam, Uart.Comm
+--co | Config option. Sections:  AVEnc, Ability, Alarm, BrowserLanguage, Detect, General, Guide, NetWork, Profuce, Record, Storage, System, fVideo, Uart. Subsection could be requested in as object property, example: Uart.Comm
 --dl | Download found files
 --c | DVR/NVR command: OPTimeSetting, Users, Groups, WorkState, StorageInfo, SystemInfo, OEMInfo, LogExport, ConfigExport, OPStorageManagerClear
 --d | Debug output

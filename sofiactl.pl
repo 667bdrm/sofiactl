@@ -242,6 +242,7 @@ sub _init {
   $self->{channel} = 0;
   $self->{begin_time} = '';
   $self->{end_time} = '';
+  $self->{raw_data} = '';
   
   if (@_) {
    my %extra = @_;
@@ -475,6 +476,7 @@ sub PrepareGenericCommand {
   }
   
   if ($out) {
+    $self->{raw_data} = $out;
     return decode_json($out);
   }
   
@@ -1264,6 +1266,22 @@ if ($cfgCmd eq "OPTimeSetting") {
   });
 } elsif ($cfgCmd eq "ConfigGet") {
   $decoded = $dvr->CmdConfigGet($cfgOption);
+  
+  if ($cfgFile ne "") {
+    my $filename = $cfgFile;
+  
+    if ($filename eq "") {
+      $filename = "config.json";
+    } elsif ($filename !~ /\.json$/) {
+      $filename .= ".json";
+    }
+	my $json = JSON->new;
+	
+	
+	open(OUT, "> $filename");
+	print OUT $json->encode($decoded->{$cfgOption});
+	close(OUT);
+  }
 }
 
 print Dumper $decoded;
@@ -1399,7 +1417,7 @@ Channel number
 
 =item N<-co>
 
-Config option: General.General, General.Location, AVEnc.EncodeStaticParam, Simplify.Encode, AVEnc.CombineEncode, AVEnc.CombineEncodeParam, Uart.Comm
+Config option: Sections:  AVEnc, Ability, Alarm, BrowserLanguage, Detect, General, Guide, NetWork, Profuce, Record, Storage, System, fVideo, Uart. Subsection could be requested in as object property, example: Uart.Comm
 
 =item B<-d>
 
