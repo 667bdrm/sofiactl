@@ -300,21 +300,26 @@ sub BuildPacket {
  my $json = JSON->new;
 
  @pkt_prefix_1 = (0xff, 0x01, 0x00, 0x00); # (head_flag, version, reserved01, reserved02)
- @pkt_prefix_2 =  (0x00, 0x00, 0x00, 0x00); # (total_packets, cur_packet)
+ $pkt_prefix_2 =  0x00; # (total_packets, cur_packet)
  
  $pkt_type = $type;
 
-
- #my $msgid = pack('c*', @$pkt_type);
+ if ($pkt_type eq FULLAUTHORITYLIST_GET) {
+   $pkt_prefix_2 = 0x16;
+ }
 
  my $msgid = pack('s', 0) . pack('s', $pkt_type);
 
- my $pkt_prefix_data =  pack('c*', @pkt_prefix_1) . pack('i', $self->{sid}) . pack('c*', @pkt_prefix_2). $msgid;
+ my $pkt_prefix_data =  pack('c*', @pkt_prefix_1) . pack('i', $self->{sid}) . pack('i', $pkt_prefix_2). $msgid;
 
- my $pkt_params_data =  $json->encode($params);
+ my $pkt_params_data = '';
+ 
+ if ($params ne undef) {
+   $pkt_params_data =  $json->encode($params);
+ }
 
  my $pkt_data = $pkt_prefix_data . pack('i', length($pkt_params_data)) . $pkt_params_data;
- 
+
  $self->{lastcommand} = $params->{Name} . sprintf(" msgid = %d", $pkt_type);
  
  return $pkt_data;
@@ -443,6 +448,7 @@ sub VersionInfo {
 
 
 sub PrepareGenericCommandHead {
+
   my $self = shift;
   my $msgid = $_[0];
   my $parameters = $_[1];
@@ -450,7 +456,7 @@ sub PrepareGenericCommandHead {
 
   my $pkt = $parameters;
   
-  if ($msgid ne LOGIN_REQ2) {
+  if ($msgid ne LOGIN_REQ2 and $parameters ne undef) {
     $parameters->{SessionID} = $self->BuildPacketSid();
   }
   
@@ -484,20 +490,30 @@ sub PrepareGenericCommand {
 }
 
 
-sub WriteDataToFile {
+sub WriteJSONDataToFile {
   my $self = shift;
   my $filename = $_[0];
   my $extension = $_[1];
   my $data = $_[2];
+  
+  return 0 if ($filename eq '');
  
-  if ($filename eq "") {
-    $filename = "data.$extension";
-  } elsif ($filename !~ /\.$extension$/) {
+  if ($filename !~ /\.$extension$/) {
     $filename .= ".$extension";
   }
   
+  my $json = JSON->new;
+  my $filedata;
+  my $type = ref($data);
+
+  if ($type eq 'HASH' || $type eq 'ARRAY') {
+    $filedata = $json->encode($data);
+  } else {
+    $filedata = $data;
+  }
+
   open(OUT, "> $filename");
-  print OUT $data;
+  print OUT $filedata;
   close(OUT);
 }
 
@@ -1283,23 +1299,24 @@ if ($cfgCmd eq "OPTimeSetting") {
       }
   });
 } elsif ($cfgCmd eq "ConfigGet") {
+
   $decoded = $dvr->CmdConfigGet($cfgOption);
+  $dvr->WriteJSONDataToFile($cfgFile, "json", $decoded->{$cfgOption});
+
+} elsif ($cfgCmd eq "AuthorityList") {
+
+  $decoded = $dvr->PrepareGenericCommand(IPcam::FULLAUTHORITYLIST_GET, undef);
+  $dvr->WriteJSONDataToFile($cfgFile, "json", $decoded->{AuthorityList});
+
+} elsif ($cfgCmd eq "OPTimeQuery") {
+ 
+  $decoded = $dvr->PrepareGenericCommand(IPcam::TIMEQUERY_REQ, {Name => 'OPTimeQuery'});
+  $dvr->WriteJSONDataToFile($cfgFile, "json", $decoded->{OPTimeQuery});
   
-  if ($cfgFile ne "") {
-	my $json = JSON->new;
+} elsif ($cfgCmd eq "Ability") {
 
-    $dvr->WriteDataToFile($cfgFile, "json", $json->encode($decoded->{$cfgOption}));
-
-  }
-} elsif ($cfgCmd eq "ConfigGet") {
-  $decoded = $dvr->CmdConfigGet($cfgOption);
-  
-  if ($cfgFile ne "") {
-	my $json = JSON->new;
-
-    $dvr->WriteDataToFile($cfgFile, "json", $json->encode($decoded->{$cfgOption}));
-
-  }
+  $decoded = $dvr->PrepareGenericCommand(IPcam::ABILITY_GET, {Name => 'SystemFunction'});
+  $dvr->WriteJSONDataToFile($cfgFile, "json", $decoded->{SystemFunction});
 }
 
 
@@ -1416,7 +1433,7 @@ DVR/NVR CMS port
 
 =item B<-c>
 
-DVR/NVR command: OPTimeSetting, Users, Groups, WorkState, StorageInfo, SystemInfo, OEMInfo, LogExport, ConfigExport, OPStorageManagerClear, OPFileQuery
+DVR/NVR command: OPTimeSetting, Users, Groups, WorkState, StorageInfo, SystemInfo, OEMInfo, LogExport, ConfigExport, OPStorageManagerClear, OPFileQuery, ConfigGet, AuthorityList, OPTimeQuery, Ability
 
 =item B<-bt>
 

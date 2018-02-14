@@ -26,6 +26,9 @@ OPStorageManagerRO | Switch partition 0 to read-only mode (not tested!)
 OPStorageManagerRW | Switch partition 0 to read/write mode (not tested!)
 OPFileQuery | Search records. Requires --bt, --et, --ch parameters
 ConfigGet | Get configuration of specified by --co parameter section
+AuthorityList | Get authenticated user access permissions
+OPTimeQuery | Get device date and time
+Ability | Get device eatures
 
 parameters:
 
@@ -43,7 +46,7 @@ parameters:
 --ch | Channel
 --co | Config option. Sections:  AVEnc, Ability, Alarm, BrowserLanguage, Detect, General, Guide, NetWork, Profuce, Record, Storage, System, fVideo, Uart. Subsection could be requested in as object property, example: Uart.Comm
 --dl | Download found files
---c | DVR/NVR command: OPTimeSetting, Users, Groups, WorkState, StorageInfo, SystemInfo, OEMInfo, LogExport, ConfigExport, OPStorageManagerClear
+--c | DVR/NVR command: OPTimeSetting, Users, Groups, WorkState, StorageInfo, SystemInfo, OEMInfo, LogExport, ConfigExport, OPStorageManagerClear, OPStorageManagerRO, OPStorageManagerRW, OPFileQuery, ConfigGet, AuthorityList, OPTimeQuery, Ability
 --d | Debug output
 
 
