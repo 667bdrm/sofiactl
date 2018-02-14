@@ -306,6 +306,8 @@ sub BuildPacket {
 
  if ($pkt_type eq FULLAUTHORITYLIST_GET) {
    $pkt_prefix_2 = 0x16;
+ } elsif ($pkt_type eq DELETEUSER_REQ) {
+   $pkt_prefix_2 = 0x06;
  }
 
  my $msgid = pack('s', 0) . pack('s', $pkt_type);
@@ -1091,7 +1093,7 @@ my $cfgEndTime = '';
 my $cfgDownload = 0;
 my $cfgQueryFile = '';
 my $cfgOption = '';
-my $cfgNewUserName = '';
+my $cfgModUserName = '';
 my $cfgNewUserGroup = '';
 my $cfgNewUserPass = '';
 
@@ -1113,7 +1115,7 @@ my  $result = GetOptions (
  "queryfile|qf=s" => \$cfgQueryFile, 
  "configoption|co=s" => \$cfgOption,
  "debug|d" => \$cfgDebug,
- "newusername=s" => \$cfgNewUserName,
+ "username=s" => \$cfgModUserName,
  "newusergroup=s" => \$cfgNewUserGroup,
  "newuserpass=s" => \$cfgNewUserPass,
 );
@@ -1342,14 +1344,14 @@ if ($cfgCmd eq "OPTimeSetting") {
   
   #print Dumper $selected_group;
   
-  if (defined($selected_group) && defined($cfgNewUserName)) {
+  if (defined($selected_group) && defined($cfgModUserName)) {
       my $pkt = {
 	      Name => 'User',
 		  User => {
 		      AuthorityList => $selected_group->{AuthorityList},
 			  Group => $selected_group->{Name},
 			  Memo => '',
-			  Name => $cfgNewUserName,
+			  Name => $cfgModUserName,
 			  Password => $dvr->md5basedHash($cfgNewUserPass),
 		  }
 	  };
@@ -1359,7 +1361,12 @@ if ($cfgCmd eq "OPTimeSetting") {
 	  $decoded = $dvr->PrepareGenericCommand(IPcam::ADDUSER_REQ, $pkt);
   }
 
+} elsif ($cfgCmd eq "DeleteUser") {
+  if (defined($cfgModUserName) and $cfgModUserName ne 'admin' and $cfgModUserName ne 'user') {
+     $decoded = $dvr->PrepareGenericCommand(IPcam::DELETEUSER_REQ, {Name => $cfgModUserName});
+  }
 }
+
 
 
 print Dumper $decoded;
