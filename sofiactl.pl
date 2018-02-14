@@ -1091,6 +1091,9 @@ my $cfgEndTime = '';
 my $cfgDownload = 0;
 my $cfgQueryFile = '';
 my $cfgOption = '';
+my $cfgNewUserName = '';
+my $cfgNewUserGroup = '';
+my $cfgNewUserPass = '';
 
 my $help = 0;
 
@@ -1110,6 +1113,9 @@ my  $result = GetOptions (
  "queryfile|qf=s" => \$cfgQueryFile, 
  "configoption|co=s" => \$cfgOption,
  "debug|d" => \$cfgDebug,
+ "newusername=s" => \$cfgNewUserName,
+ "newusergroup=s" => \$cfgNewUserGroup,
+ "newuserpass=s" => \$cfgNewUserPass,
 );
  
   
@@ -1317,6 +1323,42 @@ if ($cfgCmd eq "OPTimeSetting") {
 
   $decoded = $dvr->PrepareGenericCommand(IPcam::ABILITY_GET, {Name => 'SystemFunction'});
   $dvr->WriteJSONDataToFile($cfgFile, "json", $decoded->{SystemFunction});
+  
+} elsif ($cfgCmd eq "User") {
+  $decoded = $dvr->CmdGroups();
+  
+  my $groups = $decoded->{Groups};
+  
+  my $selected_group;
+  
+  foreach my $group (@$groups) {
+
+    if ($group->{Name} eq $cfgNewUserGroup) {
+	  $selected_group = $group;
+	  break;
+	}
+
+  }
+  
+  #print Dumper $selected_group;
+  
+  if (defined($selected_group) && defined($cfgNewUserName)) {
+      my $pkt = {
+	      Name => 'User',
+		  User => {
+		      AuthorityList => $selected_group->{AuthorityList},
+			  Group => $selected_group->{Name},
+			  Memo => '',
+			  Name => $cfgNewUserName,
+			  Password => $dvr->md5basedHash($cfgNewUserPass),
+		  }
+	  };
+	  
+	  my $json = JSON->new;
+
+	  $decoded = $dvr->PrepareGenericCommand(IPcam::ADDUSER_REQ, $pkt);
+  }
+
 }
 
 
