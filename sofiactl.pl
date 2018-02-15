@@ -308,6 +308,8 @@ sub BuildPacket {
    $pkt_prefix_2 = 0x16;
  } elsif ($pkt_type eq DELETEUSER_REQ) {
    $pkt_prefix_2 = 0x06;
+ } elsif ($pkt_type eq LOGSEARCH_REQ) {
+   $pkt_prefix_2 = 0x22;
  }
 
  my $msgid = pack('s', 0) . pack('s', $pkt_type);
@@ -1290,7 +1292,25 @@ if ($cfgCmd eq "OPTimeSetting") {
   }
   
   
-} elsif ($cfgCmd eq "Download") {
+}  elsif ($cfgCmd eq "OPLogQuery") {
+
+  $cfgBeginTime = $dvr->ParseTimestamp($cfgBeginTime);
+  $cfgEndTime = $dvr->ParseTimestamp($cfgEndTime);
+  
+  if ($dvr->{debug} ne 0) {  
+    print "begin_time = '$cfgBeginTime' end_time = '$cfgEndTime'\n";
+  }
+	  
+  $decoded = $dvr->CmdOPLogQuery({
+      BeginTime => $cfgBeginTime,
+      EndTime => $cfgEndTime,
+      LogPosition => 0,
+      Type => "LogAll",
+  });
+  
+  $dvr->WriteJSONDataToFile($cfgFile, "json", $decoded->{OPLogQuery});
+
+}  elsif ($cfgCmd eq "Download") {
 
   my $cfgBeginTime = $dvr->ParseTimestamp($cfgBeginTime);
   my $cfgEndTime = $dvr->ParseTimestamp($cfgEndTime);
@@ -1365,6 +1385,9 @@ if ($cfgCmd eq "OPTimeSetting") {
   if (defined($cfgModUserName) and $cfgModUserName ne 'admin' and $cfgModUserName ne 'user') {
      $decoded = $dvr->PrepareGenericCommand(IPcam::DELETEUSER_REQ, {Name => $cfgModUserName});
   }
+} elsif ($cfgCmd eq "ChannelTitle") {
+  $decoded = $dvr->PrepareGenericCommand(IPcam::CONFIG_CHANNELTILE_GET, {Name => "ChannelTitle"});
+  $dvr->WriteJSONDataToFile($cfgFile, "json", $decoded->{ChannelTitle});
 }
 
 
@@ -1482,7 +1505,7 @@ DVR/NVR CMS port
 
 =item B<-c>
 
-DVR/NVR command: OPTimeSetting, Users, Groups, WorkState, StorageInfo, SystemInfo, OEMInfo, LogExport, ConfigExport, OPStorageManagerClear, OPFileQuery, ConfigGet, AuthorityList, OPTimeQuery, Ability
+DVR/NVR command: OPTimeSetting, Users, Groups, WorkState, StorageInfo, SystemInfo, OEMInfo, LogExport, ConfigExport, OPStorageManagerClear, OPFileQuery, OPLogQuery, ConfigGet, AuthorityList, OPTimeQuery, Ability, User, DeleteUser, ChannelTitle
 
 =item B<-bt>
 
@@ -1503,6 +1526,18 @@ Channel number
 =item N<-co>
 
 Config option: Sections:  AVEnc, Ability, Alarm, BrowserLanguage, Detect, General, Guide, NetWork, Profuce, Record, Storage, System, fVideo, Uart. Subsection could be requested in as object property, example: Uart.Comm
+
+=item N<-username>
+
+Name of adding/editing user
+
+=item N<-newusergroup>
+
+Group of new user. Must exists, permissions (authorities) will be copied from that group
+
+=item M<-newuserpass>
+
+Password for new user
 
 =item B<-d>
 

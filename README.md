@@ -25,10 +25,14 @@ OPStorageManagerClear | Format storage (remove all recording)
 OPStorageManagerRO | Switch partition 0 to read-only mode (not tested!)
 OPStorageManagerRW | Switch partition 0 to read/write mode (not tested!)
 OPFileQuery | Search records. Requires --bt, --et, --ch parameters
+OPLogQuery | Search logs. Requires --bt, --et parameters
 ConfigGet | Get configuration of specified by --co parameter section
 AuthorityList | Get authenticated user access permissions
 OPTimeQuery | Get device date and time
 Ability | Get device eatures
+User | Add new user. Requires --username, --newuserpass and --newusergroup parameters
+DeleteUser | Delete existing user
+ChannelTitle | Show channel titles
 
 parameters:
 
@@ -46,7 +50,10 @@ parameters:
 --ch | Channel
 --co | Config option. Sections:  AVEnc, Ability, Alarm, BrowserLanguage, Detect, General, Guide, NetWork, Profuce, Record, Storage, System, fVideo, Uart. Subsection could be requested in as object property, example: Uart.Comm
 --dl | Download found files
---c | DVR/NVR command: OPTimeSetting, Users, Groups, WorkState, StorageInfo, SystemInfo, OEMInfo, LogExport, ConfigExport, OPStorageManagerClear, OPStorageManagerRO, OPStorageManagerRW, OPFileQuery, ConfigGet, AuthorityList, OPTimeQuery, Ability
+--c | DVR/NVR command: OPTimeSetting, Users, Groups, WorkState, StorageInfo, SystemInfo, OEMInfo, LogExport, ConfigExport, OPStorageManagerClear, OPStorageManagerRO, OPStorageManagerRW, OPFileQuery, OPLogQuery, ConfigGet, AuthorityList, OPTimeQuery, Ability, User, DeleteUser, ChannelTitle
+--username | Name of user to add/edit/delete
+--newuserpass | Password for new user
+--newusergroup | Group of new user. Must exists, permissions (authorities) will be copied from that group
 --d | Debug output
 
 
