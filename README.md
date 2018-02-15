@@ -33,6 +33,8 @@ Ability | Get device eatures
 User | Add new user. Requires --username, --newuserpass and --newusergroup parameters
 DeleteUser | Delete existing user
 ChannelTitle | Show channel titles
+ChannelTitleSet | Set channel titles. Pass comma separated channel titles for all device channels
+ConfigSet | Set configuration section (--co) value from input json file (--if)
 
 parameters:
 
@@ -54,6 +56,8 @@ parameters:
 --username | Name of user to add/edit/delete
 --newuserpass | Password for new user
 --newusergroup | Group of new user. Must exists, permissions (authorities) will be copied from that group
+--if | Input file for setting data
+--sd | Set data
 --d | Debug output
 
 

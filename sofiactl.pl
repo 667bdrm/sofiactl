@@ -310,6 +310,10 @@ sub BuildPacket {
    $pkt_prefix_2 = 0x06;
  } elsif ($pkt_type eq LOGSEARCH_REQ) {
    $pkt_prefix_2 = 0x22;
+ } elsif ($pkt_type eq CONFIG_CHANNELTILE_SET) {
+   $pkt_prefix = 0xa2;
+ } elsif ($pkt_type eq CONFIG_SET) {
+   $pkt_prefix = 0xae;
  }
 
  my $msgid = pack('s', 0) . pack('s', $pkt_type);
@@ -1098,6 +1102,8 @@ my $cfgOption = '';
 my $cfgModUserName = '';
 my $cfgNewUserGroup = '';
 my $cfgNewUserPass = '';
+my $cfgInputFile = '';
+my $cfgSetData = '';
 
 my $help = 0;
 
@@ -1120,6 +1126,8 @@ my  $result = GetOptions (
  "username=s" => \$cfgModUserName,
  "newusergroup=s" => \$cfgNewUserGroup,
  "newuserpass=s" => \$cfgNewUserPass,
+ "inputfile|if=s" => \$cfgInputFile,
+ "setdata|sd=s" => \$cfgSetData,
 );
  
   
@@ -1388,8 +1396,30 @@ if ($cfgCmd eq "OPTimeSetting") {
 } elsif ($cfgCmd eq "ChannelTitle") {
   $decoded = $dvr->PrepareGenericCommand(IPcam::CONFIG_CHANNELTILE_GET, {Name => "ChannelTitle"});
   $dvr->WriteJSONDataToFile($cfgFile, "json", $decoded->{ChannelTitle});
-}
+} elsif ($cfgCmd eq "ChannelTitleSet") {
 
+  my @channeltitle = split(/,/, $cfgSetData);
+  
+  $decoded = $dvr->PrepareGenericCommand(IPcam::CONFIG_CHANNELTILE_SET, {Name => "ChannelTitle", ChannelTitle => @channeltitle});
+
+}  elsif ($cfgCmd eq "ConfigSet") {
+
+  my $data = '';
+  
+  open(IN, "< $cfgInputFile");
+  
+  while (<IN>) {
+    $data .= $_;
+  }
+  close(IN);
+  
+  my $jsondata = JSON::decode_json($data);
+  
+  $decoded = $dvr->PrepareGenericCommand(IPcam::CONFIG_SET, {Name => $cfgOption, $cfgOption => $jsondata});
+  
+  $dvr->WriteJSONDataToFile($cfgFile, "json", $decoded);
+	
+}
 
 
 print Dumper $decoded;
@@ -1538,6 +1568,14 @@ Group of new user. Must exists, permissions (authorities) will be copied from th
 =item M<-newuserpass>
 
 Password for new user
+
+=item N<-if>
+
+Input file. Used for ConfigSet
+
+=item N<-sd>
+
+Set data. Used in ChannelTitleSet, etc.
 
 =item B<-d>
 
