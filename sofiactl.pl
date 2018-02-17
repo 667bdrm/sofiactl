@@ -299,7 +299,7 @@ sub BuildPacket {
  my $pkt_type;
  my $json = JSON->new;
 
- @pkt_prefix_1 = (0xff, 0x01, 0x00, 0x00); # (head_flag, version, reserved01, reserved02)
+ @pkt_prefix_1 = (0xff, 0x00, 0x00, 0x00); # (head_flag, version (was 0x01), reserved01, reserved02)
  $pkt_prefix_2 =  0x00; # (total_packets, cur_packet)
  
  $pkt_type = $type;
@@ -1336,13 +1336,15 @@ if ($cfgCmd eq "OPTimeSetting") {
   });
 
 
+  #$decoded = $dvr->CmdKeepAlive();
   
   if ($decoded->{Ret} eq "100") {
-      print "OK\n";
+
+      print "Start download\n";
 	  
   	  $decoded = $dvr->PrepareGenericCommand(IPcam::PLAY_CLAIM, {
 	    Name => "OPPlayBack",
-	    OPPlayCack => {
+	    OPPlayBack => {
       	  Action => "Claim",
       	  StartTime => $cfgBeginTime,
 	  	  EndTime => $cfgEndTime,
@@ -1360,12 +1362,21 @@ if ($cfgCmd eq "OPTimeSetting") {
 	  
 	    print "Download\n";
 		
+		sleep(5);
+		
+		print "Getting head\n";
+		
 	    my $reply_head = $dvr->GetReplyHead();
+		
+		print "Reply data\n";
+		
         my $out = $dvr->GetReplyData($reply_head);
 	  
 	    open(OUT, "> $cfgFile");
 	    print OUT $out;
 	    close(OUT);
+	  } elsif ($decoded->{Ret} eq "103") {
+	    print "Got code 103 instead of 100\n";
 	  }
   } else {
    print "N\n";
