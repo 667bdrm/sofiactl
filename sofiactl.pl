@@ -1334,6 +1334,43 @@ if ($cfgCmd eq "OPTimeSetting") {
 	      Value => 0
       }
   });
+
+
+  
+  if ($decoded->{Ret} eq "100") {
+      print "OK\n";
+	  
+  	  $decoded = $dvr->PrepareGenericCommand(IPcam::PLAY_CLAIM, {
+	    Name => "OPPlayBack",
+	    OPPlayCack => {
+      	  Action => "Claim",
+      	  StartTime => $cfgBeginTime,
+	  	  EndTime => $cfgEndTime,
+      	  Parameter => {
+	        FileName => $cfgQueryFile,
+	        PlayMode => "ByName", 
+	        TransMode => "TCP",
+	        Value => 0
+      	  }
+		}
+  	  });
+	  
+	  
+	  if ($decoded->{Ret} eq "100") {
+	  
+	    print "Download\n";
+		
+	    my $reply_head = $dvr->GetReplyHead();
+        my $out = $dvr->GetReplyData($reply_head);
+	  
+	    open(OUT, "> $cfgFile");
+	    print OUT $out;
+	    close(OUT);
+	  }
+  } else {
+   print "N\n";
+  }
+
 } elsif ($cfgCmd eq "ConfigGet") {
 
   $decoded = $dvr->CmdConfigGet($cfgOption);
@@ -1456,20 +1493,20 @@ print Dumper $decoded;
 #  "SessionID" : "0x36" 
 #}
 
-my $decoded = $dvr->CmdAlarmInfo({
-     Channel => 0,
-     Event => "VideoMotion",
-     StartTime => "2016-07-03 03:36:11",
-     Status => "Start"
-});
+#my $decoded = $dvr->CmdAlarmInfo({
+#     Channel => 0,
+#     Event => "VideoMotion",
+#     StartTime => "2016-07-03 03:36:11",
+#     Status => "Start"
+#});
 
 #my $decoded = $dvr->CmdOPNetAlarm(); #FIXME
 #my $decoded = $dvr->CmdAlarmCenterMsg(); #FIXME
 
-my $decoded = $dvr->CmdOPNetKeyboard({
-     Status => "KeyUp",
-     Value => "0",
-});
+#my $decoded = $dvr->CmdOPNetKeyboard({
+#     Status => "KeyUp",
+#     Value => "0",
+#});
 
 #my $decoded = $dvr->CmdSnap(); #FIXME unsuppoted?
 
