@@ -1,7 +1,7 @@
 # sofiactl
 
 sofiactl is an open source cross-platform tool and sdk to control Sofia powered Hi35xx DVR devices 
-using hybrid JSON/binary communication protocol used by origincal CMS software (default port 34567)
+using hybrid JSON/binary communication protocol used by original CMS software (default port 34567)
 
 
 ## Usage
@@ -71,7 +71,7 @@ parameters:
 
 ## Author and License
 
-Copyright (C) 2014-2018 667bdrm
+Copyright (C) 2014-2019 667bdrm
 
 Dual licensed under GNU General Public License 2 and commercial license
 

@@ -208,6 +208,66 @@ use constant {
 };
 
 
+%error_codes = (
+100 => "OK",
+101 => "unknown mistake",
+102 => "Version not supported",
+103 => "Illegal request",
+104 => "The user has logged in",
+105 => "The user is not logged in",
+106 => "username or password is wrong",
+107 => "No permission",
+108 => "time out",
+109 => "Failed to find, no corresponding file found",
+110 => "Find successful, return all files",
+111 => "Find success, return some files",
+112 => "This user already exists",
+113 => "this user does not exist",
+114 => "This user group already exists",
+115 => "This user group does not exist",
+116 => "Error 116",
+117 => "Wrong message format",
+118 => "PTZ protocol not set",
+119 => "No query to file",
+120 => "Configure to enable",
+121 => "MEDIA_CHN_NOT CONNECT digital channel is not connected",
+150 => "Successful, the device needs to be restarted",
+202 => "User not logged in",
+203 => "The password is incorrect",
+204 => "User illegal",
+205 => "User is locked",
+206 => "User is on the blacklist",
+207 => "Username is already logged in",
+208 => "Input is illegal",
+209 => "The index is repeated if the user to be added already exists, etc.",
+210 => "No object exists, used when querying",
+211 => "Object does not exist",
+212 => "Account is in use",
+213 => "The subset is out of scope (such as the group's permissions exceed the permission table, the user permissions exceed the group's permission range, etc.)",
+214 => "The password is illegal",
+215 => "Passwords do not match",
+216 => "Retain account",
+502 => "The command is illegal",
+503 => "Intercom has been turned on",
+504 => "Intercom is not turned on",
+511 => "Already started upgrading",
+512 => "Not starting upgrade",
+513 => "Upgrade data error",
+514 => "upgrade unsuccessful",
+515 => "update successed",
+521 => "Restore default failed",
+522 => "Need to restart the device",
+523 => "Illegal default configuration",
+602 => "Need to restart the app",
+603 => "Need to restart the system",
+604 => "Error writing a file",
+605 => "Feature not supported",
+606 => "verification failed",
+607 => "Configuration does not exist",
+608 => "Configuration parsing error",
+);
+
+
 sub new {
   my $classname = shift;
   my $self = {};
@@ -232,11 +292,11 @@ sub _init {
   $self->{user}	= ""; 
   $self->{password}	= ""; 
   $self->{socket} = undef;
-  $self->{sid} = 0;  
+  $self->{sid} = 0;
+  $self->{sequence} = 0; 
   $self->{SystemInfo} = undef;
   $self->{GenericInfo} = undef;
   $self->{lastcommand} = undef;
-  $self->{sequence} = 0;
   $self->{hashtype} = 'md5based';
   $self->{debug} = 0;
   $self->{channel} = 0;
@@ -311,24 +371,28 @@ sub BuildPacket {
  } elsif ($pkt_type eq LOGSEARCH_REQ) {
    $pkt_prefix_2 = 0x22;
  } elsif ($pkt_type eq CONFIG_CHANNELTILE_SET) {
-   $pkt_prefix = 0xa2;
+   $pkt_prefix_2 = 0xa2;
  } elsif ($pkt_type eq CONFIG_SET) {
-   $pkt_prefix = 0xae;
+   $pkt_prefix_2 = 0xae;
  }
 
  my $msgid = pack('s', 0) . pack('s', $pkt_type);
 
- my $pkt_prefix_data =  pack('c*', @pkt_prefix_1) . pack('i', $self->{sid}) . pack('i', $pkt_prefix_2). $msgid;
-
+ my $pkt_prefix_data =  pack('c*', @pkt_prefix_1) . pack('i', $self->{sid}) . pack('i', $self->{sequence}). $msgid;
+ #my $pkt_prefix_data =  pack('c*', @pkt_prefix_1) . pack('i', $self->{sid}) . pack('i', $pkt_prefix_2). $msgid;
  my $pkt_params_data = '';
  
  if ($params ne undef) {
    $pkt_params_data =  $json->encode($params);
  }
+ 
+ 
+ $pkt_params_data .= pack('C', 0x0a);
 
  my $pkt_data = $pkt_prefix_data . pack('i', length($pkt_params_data)) . $pkt_params_data;
 
  $self->{lastcommand} = $params->{Name} . sprintf(" msgid = %d", $pkt_type);
+ $self->{sequence} += 1;
  
  return $pkt_data;
 
@@ -369,10 +433,13 @@ sub GetReplyHead {
   Sequence => $seq,
   MessageId => $msgid,
   Content_Length => $size,
+  Channel => $channel,
+  EndFlag => $endflag,
  };
  
+ $self->{sid} = $sid;
  
- $self->{sequence} = $reply_head->{Sequence};
+ #$self->{sequence} = $reply_head->{Sequence};
  
  if ($self->{debug} ne 0) { 
    printf("reply: head_flag=%x version=%d session=0x%x sequence=%d channel=%d end_flag=%d msgid=%d size = %d lastcommand = %s\n", $head_flag, $version, $sid, $seq, $channel, $end_flag, $msgid, $size, $self->{lastcommand});
@@ -470,6 +537,10 @@ sub PrepareGenericCommandHead {
     $parameters->{SessionID} = $self->BuildPacketSid();
   }
   
+  if ($msgid eq MONITOR_REQ) {
+     $parameters->{SessionID} = sprintf("0x%02X", $self->{sid});
+  }
+  
   my $cmd_data = $self->BuildPacket($msgid, $pkt);
 
   $self->{socket}->send($cmd_data);
@@ -487,13 +558,20 @@ sub PrepareGenericCommand {
   my $reply_head = $self->PrepareGenericCommandHead($msgid, $parameters);
   my $out = $self->GetReplyData($reply_head);
   
-  if ($msgid eq LOGIN_REQ2 and exists  $reply_head->{SessionID}) {
-    $self->{sid} = hex($reply_head->{SessionID});
-  }
-  
   if ($out) {
     $self->{raw_data} = $out;
-    return decode_json($out);
+    my $json = decode_json($out);
+	
+	my $code = $json->{'Ret'};
+	
+	if (defined($code)) {
+	  if (defined($error_codes{$code})) {
+	    $json->{'RetMessage'} = $error_codes{$code};
+	  }
+	}
+	
+	return $json;
+	
   }
   
   return undef;
@@ -818,12 +896,12 @@ sub CmdOPMonitorClaim {
 
   my $reply = $self->GetReplyHead();
   
-  for my $k (keys %{$reply}) {
-    print "rh = $k\n";
-  }
+  #for my $k (keys %{$reply}) {
+  #  print "rh = $k\n";
+  #}
   
-  my $out = $self->GetReplyData($reply);
-  my $out1 =  decode_json($out);
+ # my $out = $self->GetReplyData($reply);
+  my $out1 =  decode_json($reply);
   
    # $self->{socket}->recv($data, 1);
   
@@ -1179,6 +1257,7 @@ if ($dvr->{sid} eq 0) {
 }
 
 if ($cfgCmd eq "OPTimeSetting") {
+ # we are running this twice since we currently don't know which packet variant applicable for the current equipment
  $decoded = $dvr->CmdOPTimeSetting(1);
  $decoded = $dvr->CmdOPTimeSetting();
 } elsif ($cfgCmd eq "Users") {
@@ -1473,6 +1552,88 @@ if ($cfgCmd eq "OPTimeSetting") {
   
   $dvr->WriteJSONDataToFile($cfgFile, "json", $decoded);
 	
+} elsif ($cfgCmd eq "OPMonitor") {
+
+  
+#  $decoded = $dvr->PrepareGenericCommand(IPcam::MONITOR_CLAIM, {
+#	    Name => "OPMonitor",
+#	    OPMonitor => {
+#      	  Action => "Claim",
+#      	  Parameter => {
+#	        Channel => $cfgChannel,
+#	        CombinMode => "NONE",
+#			StreamType => "Main",
+#	        TransMode => "TCP",
+#     	  }
+#		}
+#  });
+  #$decoded = $dvr->CmdOPMonitorClaim();
+
+  $decoded = $dvr->CmdSystemInfo();
+  
+  if ($decoded->{'Ret'} eq "100") {
+    print "SystemInfo ok\n";
+  }
+  
+  $decoded = $dvr->CmdOPTimeSetting(1);
+
+  $decoded = $dvr->PrepareGenericCommand(IPcam::GUARD_REQ, { Name => "" });
+  
+  if ($decoded->{'Ret'} eq "100") {
+    print "Guard ok\n";
+  }
+  
+  $decoded = $dvr->PrepareGenericCommand(IPcam::CONFIG_CHANNELTILE_GET, {Name => "ChannelTitle"});
+
+  if ($decoded->{'Ret'} eq "100") {
+    print "Channel title ok\n";
+  }
+
+  $decoded = $dvr->PrepareGenericCommand(IPcam::ABILITY_GET, {Name => "TalkAudioFormat"});
+
+  if ($decoded->{'Ret'} eq "100") {
+    print "TalkAudioFormat ok\n";
+  }
+  
+  $decoded = $dvr->PrepareGenericCommand(IPcam::ABILITY_GET, {Name => "SystemFunction"});
+
+  if ($decoded->{'Ret'} eq "100") {
+    print "SystemFunction ok\n";
+	#print Dumper $decoded;
+  }
+  
+  
+  $decoded = $dvr->CmdKeepAlive();
+  
+  print Dumper $decoded;
+  
+  
+	
+  if ($decoded->{'Ret'} eq "100") {
+      print "KeepAlive ok\n";
+	
+	  $decoded = $dvr->PrepareGenericCommand(IPcam::MONITOR_REQ, {
+	    Name => "OPMonitor",
+	    OPMonitor => {
+      	  Action => "Start",
+      	  Parameter => {
+	        Channel => int($cfgChannel),
+			StreamType => "Main",
+	        TransMode => "TCP"
+     	  }
+		}
+      });
+	  
+	  if ($decoded->{'Ret'} eq "100") {
+	    print "Monitor start confirm\n";
+		
+	  }
+	  
+
+  }
+  
+  
+ 
 }
 
 
