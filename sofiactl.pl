@@ -395,6 +395,8 @@ sub GetReplyData {
     $out .= $data;
   }
   
+  $out =~ s/\0+$//;
+  
   return $out;
 }
 
@@ -1163,13 +1165,17 @@ my $decoded = $dvr->CmdLogin();
 #Ret = 101 - ??? 
  
 $aliveInterval = $decoded->{'AliveInterval'};
+$ret = $decoded->{'Ret'};
 
 print sprintf("SessionID = 0x%08x\n",$dvr->{sid});
 print sprintf("AliveInterval = %d\n",$aliveInterval);
-
+print sprintf("Ret = %d\n",$ret);
 if ($dvr->{sid} eq 0) {
   print "Cannot connect\n";
-  exit(0);
+  exit(1);
+} elsif ($ret >= 200) {
+  print STDERR "Authentication failed\n";
+  exit(1);
 }
 
 if ($cfgCmd eq "OPTimeSetting") {
