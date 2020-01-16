@@ -1405,68 +1405,111 @@ if ($cfgCmd eq "OPTimeSetting") {
 
 }  elsif ($cfgCmd eq "Download") {
 
-  my $cfgBeginTime = $dvr->ParseTimestamp($cfgBeginTime);
-  my $cfgEndTime = $dvr->ParseTimestamp($cfgEndTime);
+  $cfgBeginTime = $dvr->ParseTimestamp($cfgBeginTime);
+  $cfgEndTime = $dvr->ParseTimestamp($cfgEndTime);
   
-  $decoded = $dvr->CmdOPPlayBack({
-      Action => "DownloadStart",
-      StartTime => $cfgBeginTime,
-	  EndTime => $cfgEndTime,
-      Parameter => {
-	      FileName => $cfgQueryFile,
-	      PlayMode => "ByName", 
-	      TransMode => "TCP",
-	      Value => 0
-      }
-  });
-
-
-  #$decoded = $dvr->CmdKeepAlive();
-  
-  if ($decoded->{Ret} eq "100") {
-
-      print "Start download\n";
-	  
-  	  $decoded = $dvr->PrepareGenericCommand(IPcam::PLAY_CLAIM, {
-	    Name => "OPPlayBack",
-	    OPPlayBack => {
-      	  Action => "Claim",
-      	  StartTime => $cfgBeginTime,
-	  	  EndTime => $cfgEndTime,
-      	  Parameter => {
-	        FileName => $cfgQueryFile,
-	        PlayMode => "ByName", 
-	        TransMode => "TCP",
-	        Value => 0
-      	  }
-		}
-  	  });
-	  
-	  
-	  if ($decoded->{Ret} eq "100") {
-	  
-	    print "Download\n";
-		
-		sleep(5);
-		
-		print "Getting head\n";
-		
-	    my $reply_head = $dvr->GetReplyHead();
-		
-		print "Reply data\n";
-		
-        my $out = $dvr->GetReplyData($reply_head);
-	  
-	    open(OUT, "> $cfgFile");
-	    print OUT $out;
-	    close(OUT);
-	  } elsif ($decoded->{Ret} eq "103") {
-	    print "Got code 103 instead of 100\n";
-	  }
-  } else {
-   print "N\n";
+  if ($dvr->{debug} ne 0) {  
+    print "begin_time = '$cfgBeginTime' end_time = '$cfgEndTime' channel = '$cfgChannel'\n";
   }
+  
+  #my $decoded = $dvr->CmdSystemFunction();
+	  
+  my $decoded = $dvr->CmdOPFileQuery({
+      BeginTime => $cfgBeginTime,
+      EndTime => $cfgEndTime,
+      Channel => int($cfgChannel),
+      # search all channels instead of single
+      #HighChannel => 0,
+      #LowChannel => 255,
+      DriverTypeMask => "0x0000FFFF",
+      Event => "*", # * - All; A - Alarm; M - Motion Detect; R - General; H - Manual; 
+      Type => "h264" #h264 or jpg
+  });
+  
+  
+  
+  if (defined($decoded->{'OPFileQuery'})) {
+	
+	  my $results_ref = $decoded->{'OPFileQuery'};
+	
+    if ($dvr->{debug} ne 0) {  
+      print Dumper $results_ref;	
+	  }
+	
+	  #my @results = $results_ref;
+	
+	  foreach my $result (@$results_ref) {
+      print "result\n";
+	   
+	    $result->{'FileLength'} = hex($result->{'FileLength'});
+	   
+	    print Dumper $result;
 
+      $decoded = $dvr->CmdKeepAlive();
+
+      if ($decoded->{Ret} eq "100") {
+        print "Start download\n";
+
+        $decoded = $dvr->CmdOPPlayBack({
+          Action => "DownloadStart",
+          StartTime => $result->{'BeginTime'},
+	        EndTime => $result->{'EndTime'},
+          Parameter => {
+	          FileName => $result->{'FileName'},
+	          PlayMode => "ByName",
+	          TransMode => "TCP",
+	          Value => 0
+          }
+        });
+
+        if ($decoded->{Ret} eq "100") {
+          print "Download start data phase\n";
+
+          $decoded = $dvr->CmdOPPlayBack({
+            Action => "Claim",
+            StartTime => $result->{'BeginTime'},
+	          EndTime => $result->{'EndTime'},
+            Parameter => {
+	            FileName => $result->{'FileName'},
+	            PlayMode => "ByName",
+	            TransMode => "TCP",
+	            Value => 0
+            }
+          });
+
+          if ($decoded->{Ret} eq "100") {
+            print "Download data phase\n";
+
+
+            my $reply_head = $dvr->GetReplyHead();
+            print "chp1\n";
+            print "msgid=".$reply_head->{'MessageId'} . "\n";
+
+            my $out = $dvr->GetReplyData($reply_head);
+
+            print "chp2\n";
+
+            
+            my $outfile = $result->{'FileName'};
+	  
+	          open(OUT, "> $outfile");
+	          print OUT $out;
+	          close(OUT);
+          } else {
+            print "Ret 3 NOT 100\n";
+          }
+
+        } else {
+          print "Ret 2 NOT 100\n";
+        }
+
+      } else {
+        print "Ret 1 NOT 100\n";
+      }
+	  }
+  }
+  
+  
 } elsif ($cfgCmd eq "ConfigGet") {
 
   $decoded = $dvr->CmdConfigGet($cfgOption);
