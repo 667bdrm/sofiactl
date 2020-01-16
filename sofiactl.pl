@@ -578,6 +578,43 @@ sub PrepareGenericCommand {
 }
 
 
+sub PrepareGenericStreamDownloadCommand {
+  my $self = shift;
+  my $msgid = $_[0];
+  my $parameters = $_[1];
+  my $file = $_[2];
+  my $size = $_[3];
+
+
+  my $reply_head = $self->PrepareGenericCommandHead($msgid, $parameters);
+  my $out = $self->GetReplyData($reply_head);
+  
+  if ($out) {
+    $self->{raw_data} = $out;
+    my $json = decode_json($out);
+	
+	  my $code = $json->{'Ret'};
+	
+  	if (defined($code)) {
+	    if (defined($error_codes{$code})) {
+	      $json->{'RetMessage'} = $error_codes{$code};
+	    }
+	  }
+    my $data_head = $self->GetReplyHead();
+    my $stream = $self->GetReplyData($data_head);
+  
+
+    open(OUT, ">$file");
+    print OUT $stream;
+    close(OUT);
+	
+	  return $json;
+	
+  }
+  
+  return undef;
+}
+
 sub WriteJSONDataToFile {
   my $self = shift;
   my $filename = $_[0];
@@ -1081,13 +1118,23 @@ sub CmdOEMInfo {
 sub CmdOPPlayBack {
   my $self = shift;
   my $parameters = $_[0];
+  my $file = $_[1];
   
   my $pkt = {
     Name => 'OPPlayBack',
     OPPlayBack => $parameters,
   };
 
-  return $self->PrepareGenericCommand(PLAY_REQ, $pkt);
+  my $msgid = PLAY_REQ;
+
+  if ($parameters->{'Action'} eq 'Claim') {
+    $msgid = PLAY_CLAIM;
+    #return $self->PrepareGenericStreamDownloadCommand($msgid, $pkt, $file, 666);
+  }
+
+  
+
+  return $self->PrepareGenericCommand($msgid, $pkt);
 }
 
 sub CmdOPLogQuery {
@@ -1465,6 +1512,9 @@ if ($cfgCmd eq "OPTimeSetting") {
         if ($decoded->{Ret} eq "100") {
           print "Download start data phase\n";
 
+          #$decoded = $dvr->CmdKeepAlive();
+          
+
           $decoded = $dvr->CmdOPPlayBack({
             Action => "Claim",
             StartTime => $result->{'BeginTime'},
@@ -1475,10 +1525,16 @@ if ($cfgCmd eq "OPTimeSetting") {
 	            TransMode => "TCP",
 	            Value => 0
             }
-          });
+          }, 'test.h264');
 
           if ($decoded->{Ret} eq "100") {
             print "Download data phase\n";
+
+            my $data;
+            sleep(2);
+
+            print "chp0\n";
+
 
 
             my $reply_head = $dvr->GetReplyHead();
@@ -1490,13 +1546,14 @@ if ($cfgCmd eq "OPTimeSetting") {
             print "chp2\n";
 
             
-            my $outfile = $result->{'FileName'};
+            #my $outfile = $result->{'FileName'};
+            my $outfile = 'test.h264';
 	  
 	          open(OUT, "> $outfile");
 	          print OUT $out;
 	          close(OUT);
           } else {
-            print "Ret 3 NOT 100\n";
+            print "Ret 3 NOT 100: " . $decoded->{Ret} . "\n";
           }
 
         } else {
@@ -1680,7 +1737,7 @@ if ($cfgCmd eq "OPTimeSetting") {
 }
 
 
-print Dumper $decoded;
+#print Dumper $decoded;
 
 #my $decoded = $dvr->CmdSystemFunction();
 
@@ -1744,7 +1801,7 @@ print Dumper $decoded;
 #};
 
 #my $decoded = $dvr->PrepareGenericDownloadCommand(IPcam::PHOTO_GET_REQ, $pkt, "out.dat");
-print Dumper $decoded;
+#print Dumper $decoded;
 
 
 $dvr->disconnect();
