@@ -10,20 +10,22 @@ seq:
 types:
   sofia_packet:
     seq:
-      - id: magic
+      - id: head_flag
         type: u1
         enum: protocols
-      - id: direction
+      - id: version
         type: u1
         enum: directions
-      - id: magic1
+      - id: reserved
         type: u2
       - id: session_id
         type: u4
       - id: sequence
         type: u4
-      - id: magic3
-        type: u2
+      - id: channel
+        type: u1
+      - id: end_flag
+        type: u1
       - id: message_id
         type: u2
         enum: commands
