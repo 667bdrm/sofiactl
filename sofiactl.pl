@@ -1127,15 +1127,20 @@ sub CmdOPPlayBackDownloadStart {
 
 		print "new counter = $counter\n";
 
+		my $flag = 0;
+
 		#my $buff;
 		#$self->{socket}->recv($buff, ($flength-$counter));
-		while ($counter < $flength) {
+		while ($flag == 0) {
 			print "while counter\n";
 			my $reply_head = $self->GetReplyHead();
-			if ($reply_head->{'MessageId'} == DOWNLOAD_DATA) {
+			my $size = $reply_head->{'Content_Length'};
+			if ($size > 0 && $reply_head->{'MessageId'} == DOWNLOAD_DATA) {
 				my $data = $self->GetReplyData($reply_head);
 				print OUT $data;
-				$counter += $reply_head->{'Content_Length'};
+				$counter += $size;
+			} else {
+				$flag = 1;
 			}
 
 		}
