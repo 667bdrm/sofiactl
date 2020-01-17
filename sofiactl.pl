@@ -1129,8 +1129,6 @@ sub CmdOPPlayBackDownloadStart {
 
 		my $flag = 0;
 
-		#my $buff;
-		#$self->{socket}->recv($buff, ($flength-$counter));
 		while ($flag == 0) {
 			print "while counter\n";
 			my $reply_head = $self->GetReplyHead();
@@ -1144,31 +1142,9 @@ sub CmdOPPlayBackDownloadStart {
 			}
 
 		}
-		#print OUT $buff;
 		close(OUT);
 
-	} elsif (1 == 0) {
-		open(OUT, ">> $fname" );
-		while ($counter < $flength) {
-			print "while counter\n";
-			my $reply_head = $self->GetReplyHead();
-			if ($reply_head->{'MessageId'} == DOWNLOAD_DATA) {
-				my $data = $self->GetReplyData($reply_head);
-				print OUT $data;
-				$counter += $reply_head->{'Content_Length'};
-			}
-
-		}
-
-		close(OUT);
 	}
-
-
-
-
-
-
-    #return $self->PrepareGenericCommand(PLAT_REQ, $pkt);
 
 }
 
@@ -1313,10 +1289,6 @@ my $dvr = IPcam->new(
 my $savePath = '/tmp';
 
 my $decoded = $dvr->CmdLogin();
-
-#Ret = 100 - login ok
-#Ret = 205 - bad login
-#Ret = 101 - ???
 
 $aliveInterval = $decoded->{'AliveInterval'};
 $ret           = $decoded->{'Ret'};
@@ -1594,39 +1566,6 @@ elsif ( $cfgCmd eq "Download" ) {
                         $flength
                     );
 
-                    #$decoded = $dvr->CmdOPPlayBack(
-                    #	{
-                    #		Action => "DownloadStart",
-                    #		StartTime => $result->{'BeginTime'},
-                    #		EndTime => $result->{'EndTime'},
-                    #		Parameter => {
-                    #			FileName => $result->{'FileName'},
-                    #			PlayMode => "ByName",
-                    #			TransMode=> "TCP",
-                    #			Value => 0
-                    #		}
-                    #	}
-                    #);
-
-                    #if ($decoded->{Ret} eq "100") {
-                    #
-                    #  my $reply_head = $dvr->GetReplyHead();
-                    #  print "chp1\n";
-                    #  print "msgid=".$reply_head->{'MessageId'} . "\n";
-
-                    #  my $out = $dvr->GetReplyData($reply_head);
-
-                    #  print "chp2\n";
-
-                    #my $outfile = $result->{'FileName'};
-                    #  my $outfile = 'test.h264';
-
-                    #  open(OUT, "> $outfile");
-                    #  print OUT $out;
-                    #  close(OUT);
-                    #} else {
-                    #  	print "Ret 3 NOT 100: " . $decoded->{Ret} . "\n";
-                    #}
                 }
                 else {
                     print "Ret 2 NOT 100: " . $decoded->{Ret} . "\n";
@@ -1828,36 +1767,6 @@ elsif ( $cfgCmd eq "OPMonitor" ) {
 }
 
 #print Dumper $decoded;
-
-#my $decoded = $dvr->CmdSystemFunction();
-
-#my $decoded = $dvr->CmdOPPlayBack({
-#      Action => "Claim",
-#      EndTime => '2015-05-04 17:59:24',
-#      StartTime => '2015-05-04 17:59:09',
-#      Parameter => {
-#	FileName => '/idea0/2015-05-04/002/17.59.09-17.59.24[M][@12480][0].h264',
-#	PlayMode => "ByName",
-#	TransMode => "TCP",
-#	Value => 0
-#      }
-#});
-
-#{ "Name" : "OPPlayBack",
-
-#  "OPPlayBack" : {
-#    "Action" : "DownloadStart",
-#	"EndTime" : "2018-01-29 21:51:08",
-#	"Parameter" : {
-#	  "FileName" : "/idea0/2018-01-29/001/21.00.00-22.00.00[M][@5f467][4].h264",
-#	  "PlayMode" : "ByName",
-#	  "TransMode" : "TCP",
-#	  "Value" : 0
-#	 },
-#	 "StartTime" : "2018-01-29 21:00:00"
-#  },
-#  "SessionID" : "0x36"
-#}
 
 #my $decoded = $dvr->CmdAlarmInfo({
 #     Channel => 0,
