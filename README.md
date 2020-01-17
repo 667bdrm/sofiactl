@@ -8,6 +8,10 @@ using hybrid JSON/binary communication protocol used by original CMS software (d
 
 sofiactl.pl --user username --pass password --host 192.168.0.1 --port 34567 --command command [ --of output_file ] [ -d] [ --help]
 
+## WARNING
+
+ALWAYS BACKUP your configuration with OEM CMS software before using this tool
+
 supported commands:
 
 |command | description |
@@ -34,7 +38,7 @@ User | Add new user. Requires --username, --newuserpass and --newusergroup param
 DeleteUser | Delete existing user
 ChannelTitle | Show channel titles
 ChannelTitleSet | Set channel titles. Pass comma separated channel titles for all device channels
-ConfigSet | Set configuration section (--co) value from input json file (--if)
+ConfigSet | Set configuration section (--co) value from input json file (--if). WARNING!!! There are reports about settings break using thius command. Hold on with use this option until resolution confirm.
 
 parameters:
 
@@ -71,7 +75,7 @@ parameters:
 
 ## Author and License
 
-Copyright (C) 2014-2019 667bdrm
+Copyright (C) 2014-2020 667bdrm
 
 Dual licensed under GNU General Public License 2 and commercial license
 
