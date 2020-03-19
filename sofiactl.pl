@@ -1282,7 +1282,7 @@ my $socket = IO::Socket::INET->new(
     Blocking => 1
 ) or die "Error at line " . __LINE__ . ": $!\n";
 
-print "Connecting to: host = $cfgHost port = $cfgPort\n";
+print "Connecting to: host = $cfgHost port = $cfgPort\n"  if ($cfgDebug ne 0);
 
 my $dvr = IPcam->new(
     host     => $cfgHost,
@@ -1302,9 +1302,9 @@ my $decoded = $dvr->CmdLogin();
 $aliveInterval = $decoded->{'AliveInterval'};
 $ret           = $decoded->{'Ret'};
 
-print sprintf( "SessionID = 0x%08x\n", $dvr->{sid} );
-print sprintf( "AliveInterval = %d\n", $aliveInterval );
-print sprintf( "Ret = %d\n",           $ret );
+print sprintf( "SessionID = 0x%08x\n", $dvr->{sid} )  if ($cfgDebug ne 0);
+print sprintf( "AliveInterval = %d\n", $aliveInterval )  if ($cfgDebug ne 0);
+print sprintf( "Ret = %d\n",           $ret )  if ($cfgDebug ne 0);
 if ( $dvr->{sid} eq 0 ) {
     print "Cannot connect\n";
     exit(1);
@@ -1328,8 +1328,8 @@ elsif ( $cfgCmd eq "Groups" ) {
 }
 elsif ( $cfgCmd eq "SystemInfo" ) {
     my $decoded = $dvr->CmdSystemInfo();
-    print Dumper $dvr->{GenericInfo};
-    print Dumper $dvr->getSystemInfo();
+    print Dumper $dvr->{GenericInfo} if ($cfgDebug ne 0);
+    print Dumper $dvr->getSystemInfo() if ($cfgDebug ne 0);
 
     print "System running:" . $dvr->getDeviceRuntime() . "\n\n";
 
@@ -1750,7 +1750,7 @@ elsif ( $cfgCmd eq "OPMonitor" ) {
 
     $decoded = $dvr->CmdKeepAlive();
 
-    print Dumper $decoded;
+    print Dumper $decoded if ($cfgDebug ne 0);
 
     if ( $decoded->{'Ret'} eq "100" ) {
         print "KeepAlive ok\n";
