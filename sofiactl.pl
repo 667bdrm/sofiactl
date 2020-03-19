@@ -521,6 +521,7 @@ sub PrepareGenericCommandHead {
     my $self       = shift;
     my $msgid      = $_[0];
     my $parameters = $_[1];
+    my $disc = $_[2];
     my $data;
 
     my $pkt = $parameters;
@@ -536,6 +537,11 @@ sub PrepareGenericCommandHead {
     my $cmd_data = $self->BuildPacket( $msgid, $pkt );
 
     $self->{socket}->send($cmd_data);
+    if($disc)
+    {
+        print "Force disconnecting\n";
+        exit 0;
+    }
     my $reply_head = $self->GetReplyHead();
     return $reply_head;
 }
@@ -544,8 +550,9 @@ sub PrepareGenericCommand {
     my $self       = shift;
     my $msgid      = $_[0];
     my $parameters = $_[1];
+    my $disc = $_[2];
 
-    my $reply_head = $self->PrepareGenericCommandHead( $msgid, $parameters );
+    my $reply_head = $self->PrepareGenericCommandHead($msgid, $parameters, $disc);
     my $out = $self->GetReplyData($reply_head);
 
     if ($out) {
@@ -1231,6 +1238,7 @@ my $cfgNewUserGroup = '';
 my $cfgNewUserPass  = '';
 my $cfgInputFile    = '';
 my $cfgSetData      = '';
+my $cfgForceDisc    = 0;
 
 my $help = 0;
 
@@ -1255,6 +1263,7 @@ my $result = GetOptions(
     "newuserpass=s"     => \$cfgNewUserPass,
     "inputfile|if=s"    => \$cfgInputFile,
     "setdata|sd=s"      => \$cfgSetData,
+	"forcedisconn|fd"   => \$cfgForceDisc,
 );
 
 pod2usage(1) if ($help);
@@ -1678,7 +1687,7 @@ elsif ( $cfgCmd eq "ConfigSet" ) {
     my $jsondata = JSON::decode_json($data);
 
     $decoded = $dvr->PrepareGenericCommand( IPcam::CONFIG_SET,
-        { Name => $cfgOption, $cfgOption => $jsondata } );
+        { Name => $cfgOption, $cfgOption => $jsondata }, $cfgForceDisc );
 
     $dvr->WriteJSONDataToFile( $cfgFile, "json", $decoded );
 
@@ -1890,6 +1899,10 @@ Set data. Used in ChannelTitleSet, etc.
 =item B<-d>
 
 Debug output
+
+=item B<-fd>
+
+force disconnect after parameter write (Useful when changing IP)
 
 =back
 
