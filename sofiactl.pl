@@ -1661,7 +1661,7 @@ elsif ( $cfgCmd eq "ChannelTitleSet" ) {
     my @channeltitle = split( /,/, $cfgSetData );
 
     $decoded = $dvr->PrepareGenericCommand( IPcam::CONFIG_CHANNELTILE_SET,
-        { Name => "ChannelTitle", ChannelTitle => @channeltitle } );
+        { Name => "ChannelTitle", ChannelTitle => \@channeltitle } );
 
 }
 elsif ( $cfgCmd eq "ConfigSet" ) {
