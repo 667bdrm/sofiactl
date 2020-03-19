@@ -1593,8 +1593,11 @@ elsif ( $cfgCmd eq "ConfigGet" ) {
     $decoded = $dvr->CmdConfigGet($cfgOption);
     $dvr->WriteJSONDataToFile( $cfgFile, "json", $decoded->{$cfgOption} );
 
-}
-elsif ( $cfgCmd eq "AuthorityList" ) {
+} elsif ($cfgCmd eq "Reboot") {
+
+   $decoded = $dvr->PrepareGenericCommand(IPcam::SYSMANAGER_REQ, {Name => "OPMachine", OPMachine => { Action => "Reboot" }});
+
+} elsif ( $cfgCmd eq "AuthorityList" ) {
 
     $decoded =
       $dvr->PrepareGenericCommand( IPcam::FULLAUTHORITYLIST_GET, undef );
@@ -1854,7 +1857,7 @@ DVR/NVR CMS port
 
 =item B<-c>
 
-DVR/NVR command: OPTimeSetting, Users, Groups, WorkState, StorageInfo, SystemInfo, OEMInfo, LogExport, ConfigExport, OPStorageManagerClear, OPFileQuery, OPLogQuery, ConfigGet, AuthorityList, OPTimeQuery, Ability, User, DeleteUser, ChannelTitle
+DVR/NVR command: OPTimeSetting, Users, Groups, WorkState, StorageInfo, SystemInfo, OEMInfo, LogExport, ConfigExport, OPStorageManagerClear, OPFileQuery, OPLogQuery, ConfigGet, AuthorityList, OPTimeQuery, Ability, User, DeleteUser, ChannelTitle, ConfigSet, ChannelTitleSet, Reboot
 
 =item B<-bt>
 
