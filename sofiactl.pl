@@ -1894,7 +1894,7 @@ Channel number
 
 =item N<-co>
 
-Config option: Sections:  AVEnc, Ability, Alarm, BrowserLanguage, Detect, General, Guide, NetWork, Profuce, Record, Storage, System, fVideo, Uart. Subsection could be requested in as object property, example: Uart.Comm
+Config option: Sections:  AVEnc, Ability, Alarm, BrowserLanguage, Detect, General, Guide, NetWork, Profuce, Record, Storage, System, fVideo, Uart, Simplify.Encode, Camera. Subsection could be requested in as object property, example: Uart.Comm
 
 =item N<-username>
 
