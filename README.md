@@ -38,7 +38,8 @@ User | Add new user. Requires --username, --newuserpass and --newusergroup param
 DeleteUser | Delete existing user
 ChannelTitle | Show channel titles
 ChannelTitleSet | Set channel titles. Pass comma separated channel titles for all device channels
-ConfigSet | Set configuration section (--co) value from input json file (--if). WARNING!!! There are reports about settings break using thius command. Hold on with use this option until resolution confirm.
+ConfigSet | Set configuration section (--co) value from set data (--sd) or  input json file (--if). WARNING!!! There are reports about settings break using thius command. Hold on with use this option until resolution confirm.
+Reboot | Reboot the device
 
 parameters:
 
@@ -63,6 +64,8 @@ parameters:
 --if | Input file for setting data
 --sd | Set data
 --d | Debug output
+--jp | JSON pretty print
+--fd | Dsconnect immediately after sending the command without getting a reply
 
 
 ## Tested hardware
@@ -72,6 +75,10 @@ parameters:
 [IP Camera PBFZ TCV-UTH200](http://www.aliexpress.com/item/Free-shipping-2014-NEW-IP-camera-CCTV-2-0MP-HD-1080P-IP-Network-Security-CCTV-Waterproof/1958962188.html) (XiongMai, Hi3518, 50H20L_S39)
 
 [SANNCE 4CH 1080P PoE NVR](https://www.amazon.co.uk/gp/product/B017DCMB22) (XiongMai, NBD6904T-F)
+
+[3516EV200+SC4239P Module](https://www.aliexpress.com/item/4000062673175.html) (XiongMai, IVG85HF30PS-S)
+
+[Sony IMX307+3516EV200 Module](https://www.aliexpress.com/item/32961415959.html) (XiongMai, IVG-85HF20PYA-S)
 
 ## Author and License
 
