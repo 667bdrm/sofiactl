@@ -1238,6 +1238,7 @@ my $cfgNewUserGroup = '';
 my $cfgNewUserPass  = '';
 my $cfgInputFile    = '';
 my $cfgSetData      = '';
+my $cfgJSONPretty   = 0;
 my $cfgForceDisc    = 0;
 
 my $help = 0;
@@ -1263,7 +1264,8 @@ my $result = GetOptions(
     "newuserpass=s"     => \$cfgNewUserPass,
     "inputfile|if=s"    => \$cfgInputFile,
     "setdata|sd=s"      => \$cfgSetData,
-	"forcedisconn|fd"   => \$cfgForceDisc,
+    "forcedisconn|fd"   => \$cfgForceDisc,
+    "jsonpretty|jp"     => \$cfgJSONPretty,
 );
 
 pod2usage(1) if ($help);
@@ -1329,9 +1331,15 @@ elsif ( $cfgCmd eq "Groups" ) {
 elsif ( $cfgCmd eq "SystemInfo" ) {
     my $decoded = $dvr->CmdSystemInfo();
     print Dumper $dvr->{GenericInfo} if ($cfgDebug ne 0);
-    print Dumper $dvr->getSystemInfo() if ($cfgDebug ne 0);
+    my $sysinfo=$dvr->getSystemInfo();
+    print Dumper $sysinfo if ($cfgDebug ne 0);
 
     print "System running:" . $dvr->getDeviceRuntime() . "\n\n";
+    
+    foreach my $k (keys %{$sysinfo})
+    {
+        print "$k = " . $sysinfo->{$k} . "\n";
+    }
 
     print "Build info:\n\n";
 
@@ -1590,7 +1598,12 @@ elsif ( $cfgCmd eq "Download" ) {
 }
 elsif ( $cfgCmd eq "ConfigGet" ) {
 
+    my $json = JSON->new;
+    $json->pretty($cfgJSONPretty);
     $decoded = $dvr->CmdConfigGet($cfgOption);
+    my $param = {$decoded->{"Name"} => $decoded->{$decoded->{"Name"}}};
+    $param = $json->encode($param);
+    print $param."\n";
     $dvr->WriteJSONDataToFile( $cfgFile, "json", $decoded->{$cfgOption} );
 
 } elsif ($cfgCmd eq "Reboot") {
@@ -1678,16 +1691,20 @@ elsif ( $cfgCmd eq "ChannelTitleSet" ) {
 }
 elsif ( $cfgCmd eq "ConfigSet" ) {
 
-    my $data = '';
+    my $data = $cfgSetData;
 
-    open( IN, "< $cfgInputFile" );
+    if($data eq "")
+    {
+        open( IN, "< $cfgInputFile" );
 
-    while (<IN>) {
-        $data .= $_;
+        while (<IN>) {
+            $data .= $_;
+        }
+        close(IN);
     }
-    close(IN);
-
-    my $jsondata = JSON::decode_json($data);
+    my $json = JSON->new;
+    $json->allow_nonref(1);
+    my $jsondata = $json->decode($data);
 
     $decoded = $dvr->PrepareGenericCommand( IPcam::CONFIG_SET,
         { Name => $cfgOption, $cfgOption => $jsondata }, $cfgForceDisc );
@@ -1902,6 +1919,10 @@ Set data. Used in ChannelTitleSet, etc.
 =item B<-d>
 
 Debug output
+
+=item B<-jp>
+
+JSON pretty print
 
 =item B<-fd>
 
