@@ -334,31 +334,13 @@ sub BuildPacket {
     my ( $type, $params ) = @_;
 
     my @pkt_prefix_1;
-    my @pkt_prefix_2;
     my $pkt_type;
     my $json = JSON->new;
 
     @pkt_prefix_1 = ( 0xff, 0x00, 0x00, 0x00 )
       ;    # (head_flag, version (was 0x01), reserved01, reserved02)
-    $pkt_prefix_2 = 0x00;    # (total_packets, cur_packet)
 
     $pkt_type = $type;
-
-    if ( $pkt_type eq FULLAUTHORITYLIST_GET ) {
-        $pkt_prefix_2 = 0x16;
-    }
-    elsif ( $pkt_type eq DELETEUSER_REQ ) {
-        $pkt_prefix_2 = 0x06;
-    }
-    elsif ( $pkt_type eq LOGSEARCH_REQ ) {
-        $pkt_prefix_2 = 0x22;
-    }
-    elsif ( $pkt_type eq CONFIG_CHANNELTILE_SET ) {
-        $pkt_prefix_2 = 0xa2;
-    }
-    elsif ( $pkt_type eq CONFIG_SET ) {
-        $pkt_prefix_2 = 0xae;
-    }
 
     my $msgid = pack( 's', 0 ) . pack( 's', $pkt_type );
 
@@ -1210,6 +1192,109 @@ sub CmdConfigGet {
 
     return $self->PrepareGenericCommand( CONFIG_GET, $pkt );
 }
+sub CmdUpgrade {
+    my $self       = shift;
+	my $fw         = shift;
+	my $udata="";
+	my $pktSize=0x8000;
+	my $blockNum=0;
+	my $sentbytes=0;
+	my $len=0;
+	my $pkt="";
+	my $reply_head;
+	my $out;
+	my $repl;
+    my $json=JSON->new;
+	
+	STDOUT->autoflush(1);
+	
+	open( IN, "< $fw" ) or die("Failed to open firmware file\n");
+   $decoded = $self->PrepareGenericCommand(IPcam::UPGRADE_REQ, {Name => "OPSystemUpgrade", OPSystemUpgrade => { Action => "Start", Type => "System" }});
+   if($decoded->{Ret} != 100)
+   {
+    	print $self->{error_codes}[$decoded->{Ret}]."\n";
+    	exit(1);
+   }
+	print "Uploading ".$fw."\n";
+	while (1) {
+		$len=read(IN,$udata,$pktSize);
+		#print "len=".$len."\n";
+		if($len == 0)
+		{
+			$pkt=pack("C",0xff).pack("C",0).pack("S",0).pack("L",$self->{sid}).pack("L",$blockNum).pack("S",0x0100).pack("S",IPcam::UPGRADE_DATA).pack("L",0);
+			print "last packet                              \n";
+		}elsif($len > 0){
+			$pkt=pack("C",0xff).pack("C",0).pack("S",0).pack("L",$self->{sid}).pack("L",$blockNum).pack("S",0).pack("S",IPcam::UPGRADE_DATA).pack("L",$len).$udata;
+			print "packet".$blockNum." sz=".length($pkt)."\r";
+		}else{
+			print "File read error\n";
+	    	exit(1);
+		}
+	    $self->{socket}->send($pkt);
+	    $reply_head = $self->GetReplyHead();
+	    $out = $self->GetReplyData($reply_head);
+		$blockNum++;
+		eval {
+     		# code that might throw exception
+			$repl = $json->decode($out);
+		};
+		if ($@) {
+    		# report the exception and do something about it
+			print $@."decode_json exception. data:" . $out ."\n";
+			print "Upgrade failed\n";
+	    	exit(1);
+		}
+		if($repl->{Ret} != 100)
+		{
+			print $self->{error_codes}[$repl->{Ret}]."\n";
+			exit(1);
+		}
+		if($len==0)
+		{
+			print "\nUpload successful.\nUpgrading...";
+			last;
+		}
+	}
+	close(IN);
+	print("\n");
+	while(1)
+	{
+	    $self->{socket}->send("");
+		$reply_head = $self->GetReplyHead();
+		$out = $self->GetReplyData($reply_head);
+	
+		eval {
+			# code that might throw exception
+			$repl = $json->decode($out);
+		};
+		if ($@) {
+			# report the exception and do something about it
+			print "decode_json exception. data:" . $out ."\n";
+			print "Upgrade failed\n";
+			exit(1);
+		}
+		if($repl->{Ret} == 513)
+		{
+		    $self->{socket}->send("");
+			print $self->{error_codes}[$repl->{Ret}]."               \n";
+			exit(1);
+		}
+		if($repl->{Ret} == 514)
+		{
+		    $self->{socket}->send("");
+			print $self->{error_codes}[$repl->{Ret}]."               \n";
+			exit(1);
+		}
+		if($repl->{Ret} == 515)
+		{
+		    $self->{socket}->send("");
+			print $self->{error_codes}[$repl->{Ret}]."               \n";
+			exit(1);
+		}
+		print "Progress:".$repl->{Ret}."%\r";
+	}
+
+}
 
 package main;
 use IO::Socket;
@@ -1610,6 +1695,11 @@ elsif ( $cfgCmd eq "ConfigGet" ) {
 
    $decoded = $dvr->PrepareGenericCommand(IPcam::SYSMANAGER_REQ, {Name => "OPMachine", OPMachine => { Action => "Reboot" }});
 
+} elsif ($cfgCmd eq "Upgrade") {
+
+	$dvr->CmdUpgrade($cfgInputFile);
+  #$pkt=pack("CCSLLSSL",0xff,0x00,0,$self->{sid},$self->{sequence},0,$pktType,$size)
+
 } elsif ( $cfgCmd eq "AuthorityList" ) {
 
     $decoded =
@@ -1795,7 +1885,7 @@ elsif ( $cfgCmd eq "OPMonitor" ) {
 
 }
 
-#print Dumper $decoded;
+print Dumper $decoded if ($cfgDebug ne 0);
 
 #my $decoded = $dvr->CmdAlarmInfo({
 #     Channel => 0,
@@ -1874,7 +1964,7 @@ DVR/NVR CMS port
 
 =item B<-c>
 
-DVR/NVR command: OPTimeSetting, Users, Groups, WorkState, StorageInfo, SystemInfo, OEMInfo, LogExport, ConfigExport, OPStorageManagerClear, OPFileQuery, OPLogQuery, ConfigGet, AuthorityList, OPTimeQuery, Ability, User, DeleteUser, ChannelTitle, ConfigSet, ChannelTitleSet, Reboot
+DVR/NVR command: OPTimeSetting, Users, Groups, WorkState, StorageInfo, SystemInfo, OEMInfo, LogExport, ConfigExport, OPStorageManagerClear, OPFileQuery, OPLogQuery, ConfigGet, AuthorityList, OPTimeQuery, Ability, User, DeleteUser, ChannelTitle, ConfigSet, ChannelTitleSet, Reboot, Upgrade
 
 =item B<-bt>
 
