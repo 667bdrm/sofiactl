@@ -1212,7 +1212,7 @@ sub CmdUpgrade {
    $decoded = $self->PrepareGenericCommand(IPcam::UPGRADE_REQ, {Name => "OPSystemUpgrade", OPSystemUpgrade => { Action => "Start", Type => "System" }});
    if($decoded->{Ret} != 100)
    {
-    	print $self->{error_codes}[$decoded->{Ret}]."\n";
+    	print $error_codes{$decoded->{Ret}}."\n";
     	exit(1);
    }
 	print "Uploading ".$fw."\n";
@@ -1246,7 +1246,7 @@ sub CmdUpgrade {
 		}
 		if($repl->{Ret} != 100)
 		{
-			print $self->{error_codes}[$repl->{Ret}]."\n";
+    			print $error_codes{$repl->{Ret}}."\n";
 			exit(1);
 		}
 		if($len==0)
@@ -1276,19 +1276,19 @@ sub CmdUpgrade {
 		if($repl->{Ret} == 513)
 		{
 		    $self->{socket}->send("");
-			print $self->{error_codes}[$repl->{Ret}]."               \n";
+    			print $error_codes{$repl->{Ret}}."\n";
 			exit(1);
 		}
 		if($repl->{Ret} == 514)
 		{
 		    $self->{socket}->send("");
-			print $self->{error_codes}[$repl->{Ret}]."               \n";
+    			print $error_codes{$repl->{Ret}}."\n";
 			exit(1);
 		}
 		if($repl->{Ret} == 515)
 		{
 		    $self->{socket}->send("");
-			print $self->{error_codes}[$repl->{Ret}]."               \n";
+    			print $error_codes{$repl->{Ret}}."\n";
 			exit(1);
 		}
 		print "Progress:".$repl->{Ret}."%\r";
