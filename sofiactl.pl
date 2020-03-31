@@ -2000,7 +2000,7 @@ Password for new user
 
 =item N<-if>
 
-Input file. Used for ConfigSet
+Input file. Used for ConfigSet/Upgrade cmds
 
 =item N<-sd>
 
