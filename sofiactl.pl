@@ -334,31 +334,13 @@ sub BuildPacket {
     my ( $type, $params ) = @_;
 
     my @pkt_prefix_1;
-    my @pkt_prefix_2;
     my $pkt_type;
     my $json = JSON->new;
 
     @pkt_prefix_1 = ( 0xff, 0x00, 0x00, 0x00 )
       ;    # (head_flag, version (was 0x01), reserved01, reserved02)
-    $pkt_prefix_2 = 0x00;    # (total_packets, cur_packet)
 
     $pkt_type = $type;
-
-    if ( $pkt_type eq FULLAUTHORITYLIST_GET ) {
-        $pkt_prefix_2 = 0x16;
-    }
-    elsif ( $pkt_type eq DELETEUSER_REQ ) {
-        $pkt_prefix_2 = 0x06;
-    }
-    elsif ( $pkt_type eq LOGSEARCH_REQ ) {
-        $pkt_prefix_2 = 0x22;
-    }
-    elsif ( $pkt_type eq CONFIG_CHANNELTILE_SET ) {
-        $pkt_prefix_2 = 0xa2;
-    }
-    elsif ( $pkt_type eq CONFIG_SET ) {
-        $pkt_prefix_2 = 0xae;
-    }
 
     my $msgid = pack( 's', 0 ) . pack( 's', $pkt_type );
 
@@ -521,6 +503,7 @@ sub PrepareGenericCommandHead {
     my $self       = shift;
     my $msgid      = $_[0];
     my $parameters = $_[1];
+    my $disc = $_[2];
     my $data;
 
     my $pkt = $parameters;
@@ -536,6 +519,11 @@ sub PrepareGenericCommandHead {
     my $cmd_data = $self->BuildPacket( $msgid, $pkt );
 
     $self->{socket}->send($cmd_data);
+    if($disc)
+    {
+        print "Force disconnecting\n";
+        exit 0;
+    }
     my $reply_head = $self->GetReplyHead();
     return $reply_head;
 }
@@ -544,8 +532,9 @@ sub PrepareGenericCommand {
     my $self       = shift;
     my $msgid      = $_[0];
     my $parameters = $_[1];
+    my $disc = $_[2];
 
-    my $reply_head = $self->PrepareGenericCommandHead( $msgid, $parameters );
+    my $reply_head = $self->PrepareGenericCommandHead($msgid, $parameters, $disc);
     my $out = $self->GetReplyData($reply_head);
 
     if ($out) {
@@ -1203,6 +1192,109 @@ sub CmdConfigGet {
 
     return $self->PrepareGenericCommand( CONFIG_GET, $pkt );
 }
+sub CmdUpgrade {
+    my $self       = shift;
+	my $fw         = shift;
+	my $udata="";
+	my $pktSize=0x8000;
+	my $blockNum=0;
+	my $sentbytes=0;
+	my $len=0;
+	my $pkt="";
+	my $reply_head;
+	my $out;
+	my $repl;
+    my $json=JSON->new;
+	
+	STDOUT->autoflush(1);
+	
+	open( IN, "< $fw" ) or die("Failed to open firmware file\n");
+   $decoded = $self->PrepareGenericCommand(IPcam::UPGRADE_REQ, {Name => "OPSystemUpgrade", OPSystemUpgrade => { Action => "Start", Type => "System" }});
+   if($decoded->{Ret} != 100)
+   {
+    	print $error_codes{$decoded->{Ret}}."\n";
+    	exit(1);
+   }
+	print "Uploading ".$fw."\n";
+	while (1) {
+		$len=read(IN,$udata,$pktSize);
+		#print "len=".$len."\n";
+		if($len == 0)
+		{
+			$pkt=pack("C",0xff).pack("C",0).pack("S",0).pack("L",$self->{sid}).pack("L",$blockNum).pack("S",0x0100).pack("S",IPcam::UPGRADE_DATA).pack("L",0);
+			print "last packet                              \n";
+		}elsif($len > 0){
+			$pkt=pack("C",0xff).pack("C",0).pack("S",0).pack("L",$self->{sid}).pack("L",$blockNum).pack("S",0).pack("S",IPcam::UPGRADE_DATA).pack("L",$len).$udata;
+			print "packet".$blockNum." sz=".length($pkt)."\r";
+		}else{
+			print "File read error\n";
+	    	exit(1);
+		}
+	    $self->{socket}->send($pkt);
+	    $reply_head = $self->GetReplyHead();
+	    $out = $self->GetReplyData($reply_head);
+		$blockNum++;
+		eval {
+     		# code that might throw exception
+			$repl = $json->decode($out);
+		};
+		if ($@) {
+    		# report the exception and do something about it
+			print $@."decode_json exception. data:" . $out ."\n";
+			print "Upgrade failed\n";
+	    	exit(1);
+		}
+		if($repl->{Ret} != 100)
+		{
+    			print $error_codes{$repl->{Ret}}."\n";
+			exit(1);
+		}
+		if($len==0)
+		{
+			print "\nUpload successful.\nUpgrading...";
+			last;
+		}
+	}
+	close(IN);
+	print("\n");
+	while(1)
+	{
+	    $self->{socket}->send("");
+		$reply_head = $self->GetReplyHead();
+		$out = $self->GetReplyData($reply_head);
+	
+		eval {
+			# code that might throw exception
+			$repl = $json->decode($out);
+		};
+		if ($@) {
+			# report the exception and do something about it
+			print "decode_json exception. data:" . $out ."\n";
+			print "Upgrade failed\n";
+			exit(1);
+		}
+		if($repl->{Ret} == 513)
+		{
+		    $self->{socket}->send("");
+    			print $error_codes{$repl->{Ret}}."\n";
+			exit(1);
+		}
+		if($repl->{Ret} == 514)
+		{
+		    $self->{socket}->send("");
+    			print $error_codes{$repl->{Ret}}."\n";
+			exit(1);
+		}
+		if($repl->{Ret} == 515)
+		{
+		    $self->{socket}->send("");
+    			print $error_codes{$repl->{Ret}}."\n";
+			exit(1);
+		}
+		print "Progress:".$repl->{Ret}."%\r";
+	}
+
+}
 
 package main;
 use IO::Socket;
@@ -1231,6 +1323,8 @@ my $cfgNewUserGroup = '';
 my $cfgNewUserPass  = '';
 my $cfgInputFile    = '';
 my $cfgSetData      = '';
+my $cfgJSONPretty   = 0;
+my $cfgForceDisc    = 0;
 
 my $help = 0;
 
@@ -1255,6 +1349,8 @@ my $result = GetOptions(
     "newuserpass=s"     => \$cfgNewUserPass,
     "inputfile|if=s"    => \$cfgInputFile,
     "setdata|sd=s"      => \$cfgSetData,
+    "forcedisconn|fd"   => \$cfgForceDisc,
+    "jsonpretty|jp"     => \$cfgJSONPretty,
 );
 
 pod2usage(1) if ($help);
@@ -1273,7 +1369,7 @@ my $socket = IO::Socket::INET->new(
     Blocking => 1
 ) or die "Error at line " . __LINE__ . ": $!\n";
 
-print "Connecting to: host = $cfgHost port = $cfgPort\n";
+print "Connecting to: host = $cfgHost port = $cfgPort\n"  if ($cfgDebug ne 0);
 
 my $dvr = IPcam->new(
     host     => $cfgHost,
@@ -1293,9 +1389,9 @@ my $decoded = $dvr->CmdLogin();
 $aliveInterval = $decoded->{'AliveInterval'};
 $ret           = $decoded->{'Ret'};
 
-print sprintf( "SessionID = 0x%08x\n", $dvr->{sid} );
-print sprintf( "AliveInterval = %d\n", $aliveInterval );
-print sprintf( "Ret = %d\n",           $ret );
+print sprintf( "SessionID = 0x%08x\n", $dvr->{sid} )  if ($cfgDebug ne 0);
+print sprintf( "AliveInterval = %d\n", $aliveInterval )  if ($cfgDebug ne 0);
+print sprintf( "Ret = %d\n",           $ret )  if ($cfgDebug ne 0);
 if ( $dvr->{sid} eq 0 ) {
     print "Cannot connect\n";
     exit(1);
@@ -1319,10 +1415,16 @@ elsif ( $cfgCmd eq "Groups" ) {
 }
 elsif ( $cfgCmd eq "SystemInfo" ) {
     my $decoded = $dvr->CmdSystemInfo();
-    print Dumper $dvr->{GenericInfo};
-    print Dumper $dvr->getSystemInfo();
+    print Dumper $dvr->{GenericInfo} if ($cfgDebug ne 0);
+    my $sysinfo=$dvr->getSystemInfo();
+    print Dumper $sysinfo if ($cfgDebug ne 0);
 
     print "System running:" . $dvr->getDeviceRuntime() . "\n\n";
+    
+    foreach my $k (keys %{$sysinfo})
+    {
+        print "$k = " . $sysinfo->{$k} . "\n";
+    }
 
     print "Build info:\n\n";
 
@@ -1581,11 +1683,24 @@ elsif ( $cfgCmd eq "Download" ) {
 }
 elsif ( $cfgCmd eq "ConfigGet" ) {
 
+    my $json = JSON->new;
+    $json->pretty($cfgJSONPretty);
     $decoded = $dvr->CmdConfigGet($cfgOption);
+    my $param = {$decoded->{"Name"} => $decoded->{$decoded->{"Name"}}};
+    $param = $json->encode($param);
+    print $param."\n";
     $dvr->WriteJSONDataToFile( $cfgFile, "json", $decoded->{$cfgOption} );
 
-}
-elsif ( $cfgCmd eq "AuthorityList" ) {
+} elsif ($cfgCmd eq "Reboot") {
+
+   $decoded = $dvr->PrepareGenericCommand(IPcam::SYSMANAGER_REQ, {Name => "OPMachine", OPMachine => { Action => "Reboot" }});
+
+} elsif ($cfgCmd eq "Upgrade") {
+
+	$dvr->CmdUpgrade($cfgInputFile);
+  #$pkt=pack("CCSLLSSL",0xff,0x00,0,$self->{sid},$self->{sequence},0,$pktType,$size)
+
+} elsif ( $cfgCmd eq "AuthorityList" ) {
 
     $decoded =
       $dvr->PrepareGenericCommand( IPcam::FULLAUTHORITYLIST_GET, undef );
@@ -1661,24 +1776,28 @@ elsif ( $cfgCmd eq "ChannelTitleSet" ) {
     my @channeltitle = split( /,/, $cfgSetData );
 
     $decoded = $dvr->PrepareGenericCommand( IPcam::CONFIG_CHANNELTILE_SET,
-        { Name => "ChannelTitle", ChannelTitle => @channeltitle } );
+        { Name => "ChannelTitle", ChannelTitle => \@channeltitle } );
 
 }
 elsif ( $cfgCmd eq "ConfigSet" ) {
 
-    my $data = '';
+    my $data = $cfgSetData;
 
-    open( IN, "< $cfgInputFile" );
+    if($data eq "")
+    {
+        open( IN, "< $cfgInputFile" );
 
-    while (<IN>) {
-        $data .= $_;
+        while (<IN>) {
+            $data .= $_;
+        }
+        close(IN);
     }
-    close(IN);
-
-    my $jsondata = JSON::decode_json($data);
+    my $json = JSON->new;
+    $json->allow_nonref(1);
+    my $jsondata = $json->decode($data);
 
     $decoded = $dvr->PrepareGenericCommand( IPcam::CONFIG_SET,
-        { Name => $cfgOption, $cfgOption => $jsondata } );
+        { Name => $cfgOption, $cfgOption => $jsondata }, $cfgForceDisc );
 
     $dvr->WriteJSONDataToFile( $cfgFile, "json", $decoded );
 
@@ -1738,7 +1857,7 @@ elsif ( $cfgCmd eq "OPMonitor" ) {
 
     $decoded = $dvr->CmdKeepAlive();
 
-    print Dumper $decoded;
+    print Dumper $decoded if ($cfgDebug ne 0);
 
     if ( $decoded->{'Ret'} eq "100" ) {
         print "KeepAlive ok\n";
@@ -1766,7 +1885,7 @@ elsif ( $cfgCmd eq "OPMonitor" ) {
 
 }
 
-#print Dumper $decoded;
+print Dumper $decoded if ($cfgDebug ne 0);
 
 #my $decoded = $dvr->CmdAlarmInfo({
 #     Channel => 0,
@@ -1845,7 +1964,7 @@ DVR/NVR CMS port
 
 =item B<-c>
 
-DVR/NVR command: OPTimeSetting, Users, Groups, WorkState, StorageInfo, SystemInfo, OEMInfo, LogExport, ConfigExport, OPStorageManagerClear, OPFileQuery, OPLogQuery, ConfigGet, AuthorityList, OPTimeQuery, Ability, User, DeleteUser, ChannelTitle
+DVR/NVR command: OPTimeSetting, Users, Groups, WorkState, StorageInfo, SystemInfo, OEMInfo, LogExport, ConfigExport, OPStorageManagerClear, OPFileQuery, OPLogQuery, ConfigGet, AuthorityList, OPTimeQuery, Ability, User, DeleteUser, ChannelTitle, ConfigSet, ChannelTitleSet, Reboot, Upgrade
 
 =item B<-bt>
 
@@ -1865,7 +1984,7 @@ Channel number
 
 =item N<-co>
 
-Config option: Sections:  AVEnc, Ability, Alarm, BrowserLanguage, Detect, General, Guide, NetWork, Profuce, Record, Storage, System, fVideo, Uart. Subsection could be requested in as object property, example: Uart.Comm
+Config option: Sections:  AVEnc, Ability, Alarm, BrowserLanguage, Detect, General, Guide, NetWork, Profuce, Record, Storage, System, fVideo, Uart, Simplify.Encode, Camera. Subsection could be requested in as object property, example: Uart.Comm
 
 =item N<-username>
 
@@ -1881,7 +2000,7 @@ Password for new user
 
 =item N<-if>
 
-Input file. Used for ConfigSet
+Input file. Used for ConfigSet/Upgrade cmds
 
 =item N<-sd>
 
@@ -1890,6 +2009,14 @@ Set data. Used in ChannelTitleSet, etc.
 =item B<-d>
 
 Debug output
+
+=item B<-jp>
+
+JSON pretty print
+
+=item B<-fd>
+
+force disconnect after parameter write (Useful when changing IP)
 
 =back
 
