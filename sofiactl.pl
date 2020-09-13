@@ -9,7 +9,9 @@
 #
 # PBFZ TCV-UTH200 (XiongMai, Hi3518, 50H20L_S39)
 # http://www.aliexpress.com/item/Free-shipping-2014-NEW-IP-camera-CCTV-2-0MP-HD-1080P-IP-Network-Security-CCTV-Waterproof/1958962188.html
-
+#
+# USAFEQLO USA-IPT-Y307/335 (XiongMai NRW4X-5274P-5X XM530_80X50_8M)
+# http://www.aliexpress.com/item/4000078604009.html
 #
 # Additional protocol reference : https://github.com/charmyin/IPCTimeLapse
 # vendor sdk: https://github.com/mondwan/cpp-surveillance-cli
@@ -1884,26 +1886,33 @@ elsif ( $cfgCmd eq "OPMonitor" ) {
     }
 
 } elsif ($cfgCmd eq 'OPPTZControl') {
-    my $ptzDirection = $cfgSetData;
-    $decoded = $dvr->PrepareGenericCommand( IPcam::PTZ_REQ, {
-        Name => "OPPTZControl",
-        OPPTZControl =>  {
-            Command => $ptzDirection,
-            Parameter => {
-                AUX => {
-                    Number => 0,
-                    Status => "On"
-                },
-                Channel => int($cfgChannel),
-                MenuOpts => "Enter",
-                POINT => { "bottom" => 0, "left" => 0, "right" => 0, "top" => 0 },
-                Pattern => "SetBegin",
-                Preset => 65535,
-                Step => 1,
-                Tour => 0
+
+    # DirectionRight, DirectionLeft, DirectionUp, DirectionDown, 
+    # ZoomWide, ZoomTile, IrisLarge, IrisSmall, FocusNear, FocusFar
+    my $ptzDirection = $cfgSetData; 
+
+    foreach my $i (65535, -1) {
+        $decoded = $dvr->PrepareGenericCommand( IPcam::PTZ_REQ, {
+            Name => "OPPTZControl",
+            OPPTZControl =>  {
+                Command => $ptzDirection,
+                Parameter => {
+                    AUX => {
+                        Number => 0,
+                        Status => "On"
+                    },
+                    Channel => int($cfgChannel),
+                    MenuOpts => "Enter",
+                    POINT => { "bottom" => 0, "left" => 0, "right" => 0, "top" => 0 },
+                    Pattern => "SetBegin",
+                    Preset => $i, # Preset: 65535 - start movement; -1 - stop movement
+                    Step => 5,
+                    Tour => 0
+                }
             }
-        }
-    });
+        });
+        sleep(0.5);
+    }
 
     if ( $decoded->{'Ret'} eq "100" ) {
         print "PTZ success\n";

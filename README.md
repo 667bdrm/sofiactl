@@ -30,6 +30,7 @@ OPStorageManagerRO | Switch partition 0 to read-only mode (not tested!)
 OPStorageManagerRW | Switch partition 0 to read/write mode (not tested!)
 OPFileQuery | Search records. Requires --bt, --et, --ch parameters
 OPLogQuery | Search logs. Requires --bt, --et parameters
+OPPTZControl | Execute PTZ command. Reuires parameter --sd CommandName; available PTZ commands: DirectionRight, DirectionLeft, DirectionUp, DirectionDown, ZoomWide, ZoomTile, IrisLarge, IrisSmall, FocusNear, FocusFar
 ConfigGet | Get configuration of specified by --co parameter section
 AuthorityList | Get authenticated user access permissions
 OPTimeQuery | Get device date and time
@@ -80,6 +81,9 @@ parameters:
 [3516EV200+SC4239P Module](https://www.aliexpress.com/item/4000062673175.html) (XiongMai, IVG85HF30PS-S)
 
 [Sony IMX307+3516EV200 Module](https://www.aliexpress.com/item/32961415959.html) (XiongMai, IVG-85HF20PYA-S)
+
+[USAFEQLO USA-IPT-Y307/335](http://www.aliexpress.com/item/4000078604009.html) (XiongMai, NRW4X-5274P-5X, XM530_80X50_8M)
+
 
 ## Author and License
 
