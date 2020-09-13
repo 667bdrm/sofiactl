@@ -1883,6 +1883,32 @@ elsif ( $cfgCmd eq "OPMonitor" ) {
 
     }
 
+} elsif ($cfgCmd eq 'OPPTZControl') {
+    my $ptzDirection = $cfgSetData;
+    $decoded = $dvr->PrepareGenericCommand( IPcam::PTZ_REQ, {
+        Name => "OPPTZControl",
+        OPPTZControl =>  {
+            Command => $ptzDirection,
+            Parameter => {
+                AUX => {
+                    Number => 0,
+                    Status => "On"
+                },
+                Channel => int($cfgChannel),
+                MenuOpts => "Enter",
+                POINT => { "bottom" => 0, "left" => 0, "right" => 0, "top" => 0 },
+                Pattern => "SetBegin",
+                Preset => 65535,
+                Step => 1,
+                Tour => 0
+            }
+        }
+    });
+
+    if ( $decoded->{'Ret'} eq "100" ) {
+        print "PTZ success\n";
+    }
+
 }
 
 print Dumper $decoded if ($cfgDebug ne 0);
