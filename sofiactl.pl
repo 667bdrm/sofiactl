@@ -35,8 +35,15 @@ my $use_list = {
 };
 
 if ( !can_load( modules => $use_list, autoload => true ) ) {
-    die(
-        'Failed to load required modules: ' . join( ', ', keys %{$use_list} ) );
+    my @deps;
+    for $module (keys %{$use_list}) {
+        if (!check_install(module => $module)) {
+           push(@deps, $module);
+        }
+    }
+
+    print STDERR "Failed to load required modules. Try to install the missing dependencies manually by executing:\n\n \$ sudo cpan " . join( ' ', @deps) . "\n";
+    exit(1);
 }
 
 use constant {
