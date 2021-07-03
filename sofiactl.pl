@@ -12,6 +12,10 @@
 #
 # USAFEQLO USA-IPT-Y307/335 (XiongMai NRW4X-5274P-5X XM530_80X50_8M)
 # http://www.aliexpress.com/item/4000078604009.html
+
+# GS-2AD178WTCMF/GS-2AD21WTC (XiongMai, 50X20-WG, XM530_50X20-WG_8M)
+# https://www.aliexpress.com/item/4001221668994.html - WARNING - this one DOES NOT support TF card recording, slot is not working
+
 #
 # Additional protocol reference : https://github.com/charmyin/IPCTimeLapse
 # vendor sdk: https://github.com/mondwan/cpp-surveillance-cli
@@ -545,6 +549,7 @@ sub PrepareGenericCommand {
 
 		eval {
      		# code that might throw exception
+			$out =~ s/[[:^print:]\s]//g;
 			$json = decode_json($out);
 		};
 		if ($@) {
@@ -1027,6 +1032,7 @@ sub CmdOPTimeSetting {
     my $out   = $self->GetReplyData($reply);
 
     if ($out) {
+        $out =~ s/[[:^print:]\s]//g;
         return decode_json($out);
     }
 
@@ -2019,7 +2025,7 @@ Channel number
 
 =item N<-co>
 
-Config option: Sections:  AVEnc, Ability, Alarm, BrowserLanguage, Detect, General, Guide, NetWork, Profuce, Record, Storage, System, fVideo, Uart, Simplify.Encode, Camera. Subsection could be requested in as object property, example: Uart.Comm
+Config option: Sections:  AVEnc, Ability, Alarm, BrowserLanguage, Detect, General, Guide, NetWork, NetWork.Wifi, Profuce, Record, Storage, System, fVideo, Uart, Simplify.Encode, Camera. Subsection could be requested in as object property, example: Uart.Comm
 
 =item N<-username>
 

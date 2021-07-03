@@ -57,7 +57,7 @@ parameters:
 --bt | Search begin time, ISO 8601 format (example: 2018-01-29T17:00:00Z)
 --et | Search end time, ISO 8601 format
 --ch | Channel
---co | Config option. Sections:  AVEnc, Ability, Alarm, BrowserLanguage, Detect, General, Guide, NetWork, Profuce, Record, Storage, System, fVideo, Uart. Subsection could be requested in as object property, example: Uart.Comm
+--co | Config option. Sections:  AVEnc, Ability, Alarm, BrowserLanguage, Detect, General, Guide, NetWork, NetWork.Wifi, Profuce, Record, Storage, System, fVideo, Uart. Subsection could be requested in as object property, example: Uart.Comm
 --dl | Download found files
 --c | DVR/NVR command: OPTimeSetting, Users, Groups, WorkState, StorageInfo, SystemInfo, OEMInfo, LogExport, ConfigExport, OPStorageManagerClear, OPStorageManagerRO, OPStorageManagerRW, OPFileQuery, OPLogQuery, ConfigGet, AuthorityList, OPTimeQuery, Ability, User, DeleteUser, ChannelTitle
 --username | Name of user to add/edit/delete
@@ -84,10 +84,11 @@ parameters:
 
 [USAFEQLO USA-IPT-Y307/335](http://www.aliexpress.com/item/4000078604009.html) (XiongMai, NRW4X-5274P-5X, XM530_80X50_8M)
 
+[GS-2AD178WTCMF/GS-2AD21WTC](https://www.aliexpress.com/item/4001221668994.html) (XiongMai, 50X20-WG, XM530_50X20-WG_8M) - WARNING - this one DOES NOT support TF card recording, slot is not working
 
 ## Author and License
 
-Copyright (C) 2014-2020 667bdrm
+Copyright (C) 2014-2021 667bdrm
 
 Dual licensed under GNU General Public License 2 and commercial license
 
