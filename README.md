@@ -52,14 +52,14 @@ parameters:
 --user | Username
 --pass | Password
 --hashtype | Hash type. "md5based" - md5 based hash calculation (modified md5, default), "plain" - password hash as-is (plain text) 
---host | DVR/NVR hostname or ip address
---port | DVR/NVR CMS port
+--host | DVR/NVR/IPC hostname or ip address
+--port | DVR/NVR/IPC CMS port
 --bt | Search begin time, ISO 8601 format (example: 2018-01-29T17:00:00Z)
 --et | Search end time, ISO 8601 format
 --ch | Channel
---co | Config option. Sections:  AVEnc, Ability, Alarm, BrowserLanguage, Detect, General, Guide, NetWork, NetWork.Wifi, Profuce, Record, Storage, System, fVideo, Uart. Subsection could be requested in as object property, example: Uart.Comm
+--co | Config option. Sections:  AVEnc, AVEnc.VideoWidget, AVEnc.SmartH264V2.[0], Ability, Alarm, BrowserLanguage, Detect, General, General.AutoMaintain, General.General, General.Location, Guide, NetWork, NetWork.DigManagerShow, NetWork.OnlineUpgrade, NetWork.Wifi, Profuce, Record, Status.NatInfo, Storage, System, fVideo, fVideo.GUISet, Uart. Subsection could be requested in as object property, example: Uart.Comm; Ability options: SystemFunction, Camera, Ability options: SystemFunction, BlindCapability, Camera, Encode264ability, MultiLanguage, MultiVstd, SupportExtRecord, VencMaxFps
 --dl | Download found files
---c | DVR/NVR command: OPTimeSetting, Users, Groups, WorkState, StorageInfo, SystemInfo, OEMInfo, LogExport, ConfigExport, OPStorageManagerClear, OPStorageManagerRO, OPStorageManagerRW, OPFileQuery, OPLogQuery, ConfigGet, AuthorityList, OPTimeQuery, Ability, User, DeleteUser, ChannelTitle
+--c | DVR/NVR/IPC command: OPTimeSetting, Users, Groups, WorkState, StorageInfo, SystemInfo, OEMInfo, LogExport, ConfigExport, OPStorageManagerClear, OPStorageManagerRO, OPStorageManagerRW, OPVersionList, OPFileQuery, OPLogQuery, ConfigGet, AuthorityList, OPTimeQuery, Ability, User, DeleteUser, ChannelTitle
 --username | Name of user to add/edit/delete
 --newuserpass | Password for new user
 --newusergroup | Group of new user. Must exists, permissions (authorities) will be copied from that group

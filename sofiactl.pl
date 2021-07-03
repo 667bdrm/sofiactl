@@ -191,13 +191,12 @@ use constant {
     RS485_TRANSPARENT_DATA_RSP => 1581,
     RS232_TRANSPARENT_DATA_REQ => 1582,
     RS232_TRANSPARENT_DATA_RSP => 1583,
-
     SYNC_TIME_REQ => 1590,
     SYNC_TIME_RSP => 1591,
-
     PHOTO_GET_REQ => 1600,
     PHOTO_GET_RSP => 1601,
-
+    VERSION_LIST_REQ => 2000,
+    VERSION_LIST_RSP => 2001,
 };
 
 %error_codes = (
@@ -631,6 +630,12 @@ sub WriteJSONDataToFile {
     open( OUT, "> $filename" );
     print OUT $filedata;
     close(OUT);
+}
+
+sub DumpJsonObject {
+    my $self = shift;
+    my $json_obj = $_[0];
+    return JSON->new->utf8(1)->pretty(1)->encode($json_obj);
 }
 
 sub PrepareGenericDownloadCommand {
@@ -1317,7 +1322,6 @@ use IO::Socket::INET;
 use Time::Local;
 use Getopt::Long;
 use Pod::Usage;
-use Data::Dumper;
 
 my $cfgFile         = "";
 my $cfgUser         = "";
@@ -1702,7 +1706,7 @@ elsif ( $cfgCmd eq "ConfigGet" ) {
     $json->pretty($cfgJSONPretty);
     $decoded = $dvr->CmdConfigGet($cfgOption);
     my $param = {$decoded->{"Name"} => $decoded->{$decoded->{"Name"}}};
-    $param = $json->encode($param);
+    $param = $dvr->DumpJsonObject($param);
     print $param."\n";
     $dvr->WriteJSONDataToFile( $cfgFile, "json", $decoded->{$cfgOption} );
 
@@ -1731,8 +1735,18 @@ elsif ( $cfgCmd eq "OPTimeQuery" ) {
 }
 elsif ( $cfgCmd eq "Ability" ) {
 
+    my $abilityCmd = 'SystemFunction';
+
+    if ($cfgOption) {
+        $abilityCmd = $cfgOption;
+    }
+
     $decoded = $dvr->PrepareGenericCommand( IPcam::ABILITY_GET,
-        { Name => 'SystemFunction' } );
+        { Name => $abilityCmd } );
+
+    if ($dvr->{debug} eq 0) {
+        print $dvr->DumpJsonObject($decoded);
+    }
     $dvr->WriteJSONDataToFile( $cfgFile, "json", $decoded->{SystemFunction} );
 
 }
@@ -1931,9 +1945,28 @@ elsif ( $cfgCmd eq "OPMonitor" ) {
         print "PTZ success\n";
     }
 
+} elsif ( $cfgCmd eq "OPVersionList" ) {
+    my @channeltitle = split( /,/, $cfgSetData );
+
+    $decoded = $dvr->PrepareGenericCommand( IPcam::VERSION_LIST_REQ,
+        { Name => "OPVersionList"} );
+
+    if ($dvr->{debug} eq 0) {
+        print $dvr->DumpJsonObject($decoded);
+    }
+
+} elsif ( $cfgCmd eq "BrowserLanguage" ) {
+
+    $decoded = $dvr->PrepareGenericCommand(IPcam::CONFIG_SET, { 
+        Name => 'BrowserLanguage',
+        BrowserLanguage => {
+            BrowserLanguageType => 0
+        }
+    } );
+
 }
 
-print Dumper $decoded if ($cfgDebug ne 0);
+print $dvr->DumpJsonObject($decoded) if ($cfgDebug ne 0);
 
 #my $decoded = $dvr->CmdAlarmInfo({
 #     Channel => 0,
@@ -1972,7 +2005,7 @@ __END__
 
 =head1 NAME
 
-./sofiactl.pl - utility for working with Hi35xx Sofia powered DVR/NVR
+./sofiactl.pl - utility for working with Hi35xx Sofia powered DVR/NVR/IPC
 
 =head1 SYNOPSIS
 
@@ -2004,15 +2037,15 @@ Hash type. "md5based" - md5 based hash calculation (modified md5, default), "pla
 
 =item B<-host>
 
-DVR/NVR hostname or ip address
+DVR/NVR/IPC hostname or ip address
 
 =item B<-port>
 
-DVR/NVR CMS port
+DVR/NVR/IPC CMS port
 
 =item B<-c>
 
-DVR/NVR command: OPTimeSetting, Users, Groups, WorkState, StorageInfo, SystemInfo, OEMInfo, LogExport, ConfigExport, OPStorageManagerClear, OPFileQuery, OPLogQuery, ConfigGet, AuthorityList, OPTimeQuery, Ability, User, DeleteUser, ChannelTitle, ConfigSet, ChannelTitleSet, Reboot, Upgrade
+DVR/NVR/IPC command: OPTimeSetting, Users, Groups, WorkState, StorageInfo, SystemInfo, SystemFunction, OEMInfo, LogExport, BrowserLanguage, ConfigExport, OPStorageManagerClear, OPFileQuery, OPLogQuery, OPVersionList, ConfigGet, AuthorityList, OPTimeQuery, Ability, User, DeleteUser, BrowserLanguage, ChannelTitle, ConfigSet, ChannelTitleSet, Reboot, Upgrade
 
 =item B<-bt>
 
@@ -2032,7 +2065,10 @@ Channel number
 
 =item N<-co>
 
-Config option: Sections:  AVEnc, Ability, Alarm, BrowserLanguage, Detect, General, Guide, NetWork, NetWork.Wifi, Profuce, Record, Storage, System, fVideo, Uart, Simplify.Encode, Camera. Subsection could be requested in as object property, example: Uart.Comm
+Config option: Sections:  AVEnc, AVEnc.VideoWidget, AVEnc.SmartH264V2.[0], Ability, Alarm, BrowserLanguage, Detect, General, General.AutoMaintain, General.General, General.Location, Guide, NetWork, NetWork.DigManagerShow, NetWork.Wifi, NetWork.OnlineUpgrade, Profuce, Record, Status.NatInfo, Storage, System, fVideo, fVideo.GUISet, Uart, Simplify.Encode, Camera. Subsection could be requested in as object property, example: Uart.Comm
+
+Ability options: SystemFunction, AHDEncodeL, BlindCapability, Camera, Encode264ability, MultiLanguage, MultiVstd, SupportExtRecord, VencMaxFps
+
 
 =item N<-username>
 
