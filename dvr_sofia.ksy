@@ -46,9 +46,11 @@ enums:
     1003: forcelogout_req
     1004: forcelogout_rsp
     1006: keepalive_req
-    1007: keepalive_rsp  
+    1007: keepalive_rsp
+    1010: encryption_info_req
+    1011: encryption_info_rsp
     1020: sysinfo_req
-    1021: sysinfo_rsp  
+    1021: sysinfo_rsp
     1040: config_set
     1041: config_set_rsp
     1042: config_get
@@ -167,6 +169,25 @@ enums:
     1591: sync_time_rsp
     1600: photo_get_req
     1601: photo_get_rsp
+    1610: optupdata1_req # OPTUpData
+    1611: optupdata1_rsp
+    1612: optupdata2_req
+    1613: optupdata2_rsp
+    1636: unknown_search_req
+    1637: unknown_search_rsp
+    2012: opconsumerprod_req
+    2013: opconsumerprod_rsp
+    2016: opversionrep_req
+    2017: opversionrep_rsp
+    2026: opscalendar_req
+    2027: opscalendar_rsp
+    2038: opbreviarypic_req
+    2039: opbreviarypic_rsp
+    2062: unknown_2062_req
+    2063: unknown_2062_rsp
+    2122: unknown_2122_raw_data_req
+    2000: version_list_req
+    2001: version_list_rsp
     
   protocols:
     0xff: protocol_sofia

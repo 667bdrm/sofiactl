@@ -54,8 +54,10 @@ use constant {
     LOGOUT_RSP      => 1002,
     FORCELOGOUT_REQ => 1003,
     FORCELOGOUT_RSP => 1004,
-    KEEPALIVE_REQ   => 1006,    # 1005
-    KEEPALIVE_RSP   => 1007,    # 1006
+    KEEPALIVE_REQ   => 1006, # 1005 on some devices
+    KEEPALIVE_RSP   => 1007, # 1006 on some devices
+    ENCRYPTION_INFO_REQ => 1010,
+    ENCRYPTION_INFO_RSP => 1011,
 
     SYSINFO_REQ => 1020,
     SYSINFO_RSP => 1021,
@@ -109,7 +111,10 @@ use constant {
     LOGSEARCH_RSP         => 1443,
     FILESEARCH_BYTIME_REQ => 1444,
     FILESEARCH_BYTIME_RSP => 1445,
-
+    OPSCALENDAR1_REQ => 1446,
+    OPSCALENDAR1_RSP => 1447,
+    UNKNOWN_SEARCH1_REQ => 1448,
+    UNKNOWN_SEARCH1_RSP => 1449,
     SYSMANAGER_REQ => 1450,
     SYSMANAGER_RSP => 1451,
     TIMEQUERY_REQ  => 1452,
@@ -166,7 +171,7 @@ use constant {
     CONFIG_IMPORT_RSP => 1541,
     CONFIG_EXPORT_REQ => 1542,
     CONFIG_EXPORT_RSP => 1543,
-    LOG_EXPORT_REQ    => 1544,    #CONDIG_EXPORT_REQ
+    LOG_EXPORT_REQ    => 1544,    #CONFIG_EXPORT_REQ
     LOG_EXPORT_RSP    => 1545,    #CONFIG_EXPORT_RSP
 
     NET_KEYBOARD_REQ => 1550,
@@ -195,8 +200,26 @@ use constant {
     SYNC_TIME_RSP => 1591,
     PHOTO_GET_REQ => 1600,
     PHOTO_GET_RSP => 1601,
+    OPTUPDATA1_REQ => 1610,
+    OPTUPDATA1_RSP => 1611,
+    OPTUPDATA2_REQ => 1612,
+    OPTUPDATA2_RSP => 1613, # OPTUpData
+    UNKNOWN_SEARCH_REQ => 1636,
+    UNKNOWN_SEARCH_RSP => 1637,
+    UNKNOWN_CUSTOM_EXPORT_REQ => 1644, # Custom zipped configs, maybe OEM
     VERSION_LIST_REQ => 2000,
     VERSION_LIST_RSP => 2001,
+    OPCONSUMERPROCMD_REQ => 2012, # OPConsumerProCmd
+    OPCONSUMERPROCMD_RSP => 2013,
+    OPVERSIONREP_REQ => 2016, # OPVersionRep
+    OPVERSIONREP_RSP => 2017,
+    OPSCALENDAR_REQ => 2026, # OPSCalendar
+    OPSCALENDAR_RSP => 2027,
+    OPBREVIARYPIC_REQ => 2038, # OPBreviaryPic
+    OPBREVIARYPIC_RSP => 2039,
+    UNKNOWN_2062_REQ => 2062,
+    UNKNOWN_2062_RSP => 2063,
+    UNKNOWN_2122_RAW_DATA => 2122,
 };
 
 %error_codes = (
@@ -1474,16 +1497,16 @@ elsif ( $cfgCmd eq "LogExport" ) {
 
 }
 elsif ( $cfgCmd eq "ConfigExport" ) {
-    my $filename = $cfgFile;
+    my $filename = "configs.zip";
 
-    if ( $filename eq "" ) {
-        $filename = "configs.zip";
+    if ($cfgFile) {
+        $filename = $cfgFile;
     }
     elsif ( $filename !~ /\.zip$/ ) {
         $filename .= ".zip";
     }
 
-    $decoded = $dvr->ConfigExport($cfgFile);
+    $decoded = $dvr->ConfigExport($filename);
 }
 elsif ( $cfgCmd eq "OEMInfo" ) {
     $decoded = $dvr->CmdOEMInfo();
@@ -1956,14 +1979,61 @@ elsif ( $cfgCmd eq "OPMonitor" ) {
     }
 
 } elsif ( $cfgCmd eq "BrowserLanguage" ) {
-
-    $decoded = $dvr->PrepareGenericCommand(IPcam::CONFIG_SET, { 
+    $decoded = $dvr->PrepareGenericCommand(IPcam::CONFIG_SET, {
         Name => 'BrowserLanguage',
         BrowserLanguage => {
             BrowserLanguageType => 0
         }
     } );
+} elsif ($cfgCmd eq "CustomExport") {
+    my $filename = "configs-custom.zip";
 
+    if ($cfgFile) {
+        $filename = $cfgFile;
+    }
+    elsif ( $filename !~ /\.zip$/ ) {
+        $filename .= ".zip";
+    }
+
+    $decoded = $dvr->PrepareGenericDownloadCommand(IPcam::UNKNOWN_CUSTOM_EXPORT_REQ, {}, $filename );
+} elsif ( $cfgCmd eq "OPVersionRep" ) {
+    $decoded = $dvr->PrepareGenericCommand(IPcam::OPVERSIONREP_REQ,  { Name => "OPVersionRep"});
+    if ($dvr->{debug} eq 0) {
+        print $dvr->DumpJsonObject($decoded);
+    }
+} elsif ( $cfgCmd eq "OPSCalendar" ) {
+    $decoded = $dvr->PrepareGenericCommand(IPcam::OPSCALENDAR_REQ,  { Name => "OPSCalendar"});
+    if ($dvr->{debug} eq 0) {
+        print $dvr->DumpJsonObject($decoded);
+    }
+} elsif ( $cfgCmd eq "EncryptionInfo" ) {
+    $decoded = $dvr->PrepareGenericCommand(IPcam::ENCRYPTION_INFO_REQ,  {});
+    if ($dvr->{debug} eq 0) {
+        print $dvr->DumpJsonObject($decoded);
+    }
+} elsif ( $cfgCmd eq "ProbeCommand" ) {
+    if ($cfgOption) {
+        $decoded = $dvr->PrepareGenericCommand(int($cfgOption),  {});
+        if ($dvr->{debug} eq 0) {
+            print $dvr->DumpJsonObject($decoded);
+        }
+    } else {
+        print "Usage: -c ProbeCommand -co <CommandMsgId>\n";
+    }
+
+} elsif ( $cfgCmd eq "ProbeCommandRaw" ) {
+    if ($cfgOption) {
+        $decoded = $dvr->PrepareGenericCommand(int($cfgOption),  {});
+        my $filename = "probe-responze.dat";
+
+        if ($cfgFile) {
+            $filename = $cfgFile;
+        }
+
+        $decoded = $dvr->PrepareGenericDownloadCommand(int($cfgOption), {}, $filename );
+    } else {
+        print "Usage: -c ProbeCommandRaw -co <CommandMsgId>\n";
+    }
 }
 
 print $dvr->DumpJsonObject($decoded) if ($cfgDebug ne 0);
@@ -2045,7 +2115,7 @@ DVR/NVR/IPC CMS port
 
 =item B<-c>
 
-DVR/NVR/IPC command: OPTimeSetting, Users, Groups, WorkState, StorageInfo, SystemInfo, SystemFunction, OEMInfo, LogExport, BrowserLanguage, ConfigExport, OPStorageManagerClear, OPFileQuery, OPLogQuery, OPVersionList, ConfigGet, AuthorityList, OPTimeQuery, Ability, User, DeleteUser, BrowserLanguage, ChannelTitle, ConfigSet, ChannelTitleSet, Reboot, Upgrade
+DVR/NVR/IPC command: OPTimeSetting, Users, Groups, WorkState, StorageInfo, SystemInfo, SystemFunction, OEMInfo, LogExport, BrowserLanguage, ConfigExport, CustomExport, OPStorageManagerClear, OPFileQuery, OPLogQuery, OPVersionList, ConfigGet, AuthorityList, OPTimeQuery, Ability, User, DeleteUser, BrowserLanguage, ChannelTitle, ConfigSet, ChannelTitleSet, Reboot, Upgrade, ProbeCommand, ProbeCommandRaw
 
 =item B<-bt>
 
