@@ -88,7 +88,7 @@ parameters:
 
 [USAFEQLO USA-IPT-Y307/335](http://www.aliexpress.com/item/4000078604009.html) (XiongMai, NRW4X-5274P-5X, XM530_80X50_8M)
 
-[GS-2AD178WTCMF/GS-2AD21WTC](https://www.aliexpress.com/item/4001221668994.html) (XiongMai, 50X20-WG, XM530_50X20-WG_8M) - WARNING - this one DOES NOT support TF card recording, slot is not working
+[GS-2AD178WTCMF/GS-2AD21WTC](https://www.aliexpress.com/item/4001221668994.html) (XiongMai, 50X20-WG, XM530_50X20-WG_8M)
 
 ## Author and License
 
