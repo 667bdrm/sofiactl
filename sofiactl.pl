@@ -208,7 +208,7 @@ use constant {
     UNKNOWN_SEARCH_RSP => 1637,
     UNKNOWN_CUSTOM_EXPORT_REQ => 1644, # Custom zipped configs, maybe OEM
     VERSION_LIST_REQ => 2000,
-    VERSION_LIST_RSP => 2001,
+    VERSION_LIST_RSP => 2001, # props: VersionDate, VersionName
     OPCONSUMERPROCMD_REQ => 2012, # OPConsumerProCmd
     OPCONSUMERPROCMD_RSP => 2013,
     OPVERSIONREP_REQ => 2016, # OPVersionRep
@@ -217,6 +217,8 @@ use constant {
     OPSCALENDAR_RSP => 2027,
     OPBREVIARYPIC_REQ => 2038, # OPBreviaryPic
     OPBREVIARYPIC_RSP => 2039,
+    OPTELNETCONTROL_REQ => 2040, # possible props: OPTelnetControl, TelnetCommand, EnableKey
+    OPTELNETCONTROL_RSP => 2041,
     UNKNOWN_2062_REQ => 2062,
     UNKNOWN_2062_RSP => 2063,
     UNKNOWN_2122_RAW_DATA => 2122,
@@ -2034,6 +2036,18 @@ elsif ( $cfgCmd eq "OPMonitor" ) {
     } else {
         print "Usage: -c ProbeCommandRaw -co <CommandMsgId>\n";
     }
+} elsif ( $cfgCmd eq "OPTelnetControl" ) {
+    if ($cfgOption) {
+        $decoded = $dvr->PrepareGenericCommand(IPcam::OPTELNETCONTROL_REQ, {
+            Name => 'OPTelnetControl',
+            OPTelnetControl => {
+                TelnetCommand => $cfgOption,
+                EnableKey => 0, # junk value, find the correct one
+            }
+        });
+    } else {
+        print "Usage: -c OPTelnetControl -co <command option>\n\nCommand options:\nTelnetEnable - enable telnet\nTelnetDisEnable - disable telnet\n";
+    }
 }
 
 print $dvr->DumpJsonObject($decoded) if ($cfgDebug ne 0);
@@ -2115,7 +2129,7 @@ DVR/NVR/IPC CMS port
 
 =item B<-c>
 
-DVR/NVR/IPC command: OPTimeSetting, Users, Groups, WorkState, StorageInfo, SystemInfo, SystemFunction, OEMInfo, LogExport, BrowserLanguage, ConfigExport, CustomExport, OPStorageManagerClear, OPFileQuery, OPLogQuery, OPVersionList, ConfigGet, AuthorityList, OPTimeQuery, Ability, User, DeleteUser, BrowserLanguage, ChannelTitle, ConfigSet, ChannelTitleSet, Reboot, Upgrade, ProbeCommand, ProbeCommandRaw
+DVR/NVR/IPC command: OPTimeSetting, Users, Groups, WorkState, StorageInfo, SystemInfo, SystemFunction, OEMInfo, LogExport, BrowserLanguage, ConfigExport, CustomExport, OPStorageManagerClear, OPFileQuery, OPLogQuery, OPVersionList, ConfigGet, AuthorityList, OPTimeQuery, Ability, User, DeleteUser, BrowserLanguage, ChannelTitle, ConfigSet, ChannelTitleSet, Reboot, Upgrade, ProbeCommand, ProbeCommandRaw, OPTelnetControl
 
 =item B<-bt>
 
@@ -2139,6 +2153,7 @@ Config option: Sections:  AVEnc, AVEnc.VideoWidget, AVEnc.SmartH264V2.[0], Abili
 
 Ability options: SystemFunction, AHDEncodeL, BlindCapability, Camera, Encode264ability, MultiLanguage, MultiVstd, SupportExtRecord, VencMaxFps
 
+OPTelnetControl options: TelnetEnable, TelnetDisEnable
 
 =item N<-username>
 

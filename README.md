@@ -46,6 +46,7 @@ Upgrade | Upgrade the device firmware. Firmware file name should be passed with 
 ProbeCommand | !!! DANGER !!! Execute custom protocol command (2 byte message id) specified by --co parameter, response will be decoded from json
 ProbeCommandRaw | !!! DANGER !!! Execute custom protocol command (2 byte message id) specified by --co parameter, response will be dumped as-is to file
 EncryptionInfo | Get encryption public key and alogrithm info on some devices
+OPTelnetControl | Control telnet functionality (not tested!). Options: TelnetEnable, TelnetDisEnable - !!!DANGER!!! there are info that TelnetDisEnable disable telnet forever if succeed.
 
 parameters:
 
