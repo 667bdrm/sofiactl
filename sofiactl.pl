@@ -14,7 +14,7 @@
 # http://www.aliexpress.com/item/4000078604009.html
 
 # GS-2AD178WTCMF/GS-2AD21WTC (XiongMai, 50X20-WG, XM530_50X20-WG_8M)
-# https://www.aliexpress.com/item/4001221668994.html - WARNING - this one DOES NOT support TF card recording, slot is not working
+# https://www.aliexpress.com/item/4001221668994.html
 
 #
 # Additional protocol reference : https://github.com/charmyin/IPCTimeLapse
@@ -222,6 +222,18 @@ use constant {
     UNKNOWN_2062_REQ => 2062,
     UNKNOWN_2062_RSP => 2063,
     UNKNOWN_2122_RAW_DATA => 2122,
+    OPGGETPGSSTATE_REQ => 2210,
+    OPGGETPGSSTATE_RSP => 2211,
+    OPPGSGETIMG_REQ => 2212,
+    OPPGSGETIMG_REQ => 2213,
+    OPSETCUSTOMDATA_REQ => 2214,
+    OPSETCUSTOMDATA_RSP => 2215,
+    OPGETCUSTOMDATA_REQ => 2216,
+    OPGETCUSTOMDATA_RSP => 2217,
+    OPGETACTIVATIONCODE_REQ => 2218,
+    OPGETACTIVATIONCODE_RSP => 2219,
+    OPCTRLDVRINFO_REQ => 2220,
+    OPCTRLDVRINFO_RSP => 2221,
 };
 
 %error_codes = (
@@ -1573,9 +1585,9 @@ elsif ( $cfgCmd eq "OPFileQuery" ) {
 "begin_time = '$cfgBeginTime' end_time = '$cfgEndTime' channel = '$cfgChannel'\n";
     }
 
-    #my $decoded = $dvr->CmdSystemFunction();
+    #$decoded = $dvr->CmdSystemFunction();
 
-    my $decoded = $dvr->CmdOPFileQuery(
+    $decoded = $dvr->CmdOPFileQuery(
         {
             BeginTime => $cfgBeginTime,
             EndTime   => $cfgEndTime,
@@ -1640,7 +1652,7 @@ elsif ( $cfgCmd eq "Download" ) {
 
     #my $decoded = $dvr->CmdSystemFunction();
 
-    my $decoded = $dvr->CmdOPFileQuery(
+    $decoded = $dvr->CmdOPFileQuery(
         {
             BeginTime => $cfgBeginTime,
             EndTime   => $cfgEndTime,
@@ -1738,6 +1750,7 @@ elsif ( $cfgCmd eq "ConfigGet" ) {
 } elsif ($cfgCmd eq "Reboot") {
 
    $decoded = $dvr->PrepareGenericCommand(IPcam::SYSMANAGER_REQ, {Name => "OPMachine", OPMachine => { Action => "Reboot" }});
+   # try Action => 'Shutdown'
 
 } elsif ($cfgCmd eq "Upgrade") {
 
@@ -2048,7 +2061,56 @@ elsif ( $cfgCmd eq "OPMonitor" ) {
     } else {
         print "Usage: -c OPTelnetControl -co <command option>\n\nCommand options:\nTelnetEnable - enable telnet\nTelnetDisEnable - disable telnet\n";
     }
+} elsif ( $cfgCmd eq "OPGetActivationCode" ) {
+    $decoded = $dvr->PrepareGenericCommand(IPcam::OPGETACTIVATIONCODE_REQ, {
+        Name => 'OPGetActivationCode',
+    });
+    if ($dvr->{debug} eq 0) {
+        print $dvr->DumpJsonObject($decoded);
+    }
+} elsif ( $cfgCmd eq "OPCtrlDVRInfo" ) {
+    $decoded = $dvr->PrepareGenericCommand(IPcam::OPCTRLDVRINFO_REQ, {
+        Name => 'OPCtrlDVRInfo',
+        OPCtrlDVRInfo => {
+            Chn => 1,
+            Type => '',
+        }
+    });
+    if ($dvr->{debug} eq 0) {
+        print $dvr->DumpJsonObject($decoded);
+    }
+} elsif ( $cfgCmd eq "OPGetCustomData" ) {
+    $decoded = $dvr->PrepareGenericCommand(IPcam::OPGETCUSTOMDATA_REQ, {
+        Name => 'OPGetCustomData',
+        Channel => int($cfgChannel),
+    });
+    if ($dvr->{debug} eq 0) {
+        print $dvr->DumpJsonObject($decoded);
+    }
+} elsif ( $cfgCmd eq "OPSetCustomData" ) {
+    $decoded = $dvr->PrepareGenericCommand(IPcam::OPSETCUSTOMDATA_REQ, {
+        Name => 'OPSetCustomData',
+        OPSetCustomData => {
+            Channel => int($cfgChannel),
+            Data => $cfgSetData,
+        }
+    });
+
+    if ($dvr->{debug} eq 0) {
+        print $dvr->DumpJsonObject($decoded);
+    }
 }
+
+#$decoded = $dvr->PrepareGenericCommand(IPcam::OPPGSGETIMG_REQ, {
+#    Name => 'OPPgsGetImg',
+#    OPPgsGetImg => {
+#        Channel => 0,
+#    }
+#});
+
+#$decoded = $dvr->PrepareGenericCommand(IPcam::OPGGETPGSSTATE_REQ, {
+#    Name => 'OPGetPgsState',
+#});
 
 print $dvr->DumpJsonObject($decoded) if ($cfgDebug ne 0);
 
