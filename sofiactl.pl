@@ -1871,8 +1871,14 @@ elsif ( $cfgCmd eq "ConfigGet" ) {
         $decoded = $dvr->PrepareGenericCommand(IPcam::SYSMANAGER_REQ, {
             Name => "OPNetModeSwitch",
             OPNetModeSwitch => {
-                Action => "$cfgOption"
+                Action => "$cfgOption",
+                # Action: ToAP, ToRoute, ToConfig
+
+                # ToAP - enable ongiguration access point
+                # ToRoute - connect to router (wifi access point must be configured!!!)
+                # ToConfig - configurtion mode !!! WARNING !!! connnection to router will be broken and configuration access point will be disabled
             }
+
         });
     } else {
         print "Usage: -c OPNetModeSwitch -co <network mode switch option>\n!!! WARNING !!! This could kill your camera network connection until restore factory settings!\n";
