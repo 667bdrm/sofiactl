@@ -112,3 +112,10 @@ vendor sdk: https://github.com/mondwan/cpp-surveillance-cli
 Additional protocol reference : https://github.com/charmyin/IPCTimeLapse
 
 password hashing: https://github.com/tothi/pwn-hisilicon-dvr
+
+python sdk: https://github.com/NeiroNx/python-dvr
+
+xm cam tricks: https://zftlab.org/pages/2018020100.html
+
+more docs: https://github.com/OpenIPC/camerasrnd/tree/master/doc
+
