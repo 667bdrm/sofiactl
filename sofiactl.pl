@@ -386,8 +386,7 @@ sub BuildPacket {
     my $pkt_type;
     my $json = JSON->new;
 
-    @pkt_prefix_1 = ( 0xff, 0x00, 0x00, 0x00 )
-      ;    # (head_flag, version (was 0x01), reserved01, reserved02)
+    @pkt_prefix_1 = ( 0xff, 0x00, 0x00, 0x00 ); # (head_flag, version (was 0x01), reserved01, reserved02)
 
     $pkt_type = $type;
 
@@ -399,7 +398,6 @@ sub BuildPacket {
       . pack( 'i', $self->{sequence} )
       . $msgid;
 
-#my $pkt_prefix_data =  pack('c*', @pkt_prefix_1) . pack('i', $self->{sid}) . pack('i', $pkt_prefix_2). $msgid;
     my $pkt_params_data = '';
 
     if ( $params ne undef ) {
@@ -413,12 +411,39 @@ sub BuildPacket {
       . pack( 'i', length($pkt_params_data) )
       . $pkt_params_data;
 
-    $self->{lastcommand} =
-      $params->{Name} . sprintf( " msgid = %d", $pkt_type );
+    $self->{lastcommand} = $params->{Name} . sprintf( " msgid = %d", $pkt_type );
     $self->{sequence} += 1;
 
     return $pkt_data;
+}
 
+sub BuildRawPacket {
+    my $self = shift;
+    my ( $type, $params ) = @_;
+    my @pkt_prefix_1;
+    my $pkt_type;
+
+    @pkt_prefix_1 = ( 0xff, 0x00, 0x00, 0x00 ); # (head_flag, version (was 0x01), reserved01, reserved02)
+
+    $pkt_type = $type;
+
+    my $msgid = pack( 's', 0 ) . pack( 's', $pkt_type );
+
+    my $pkt_prefix_data =
+        pack( 'c*', @pkt_prefix_1 )
+      . pack( 'i', $self->{sid} )
+      . pack( 'i', $self->{sequence} )
+      . $msgid;
+
+    my $pkt_data =
+        $pkt_prefix_data
+      . pack( 'i', length($params) )
+      . $params;
+
+    $self->{lastcommand} = $params->{Name} . sprintf( " msgid = %d", $pkt_type );
+    $self->{sequence} += 1;
+
+    return $pkt_data;
 }
 
 sub GetReplyHead {
@@ -577,6 +602,29 @@ sub PrepareGenericCommandHead {
     return $reply_head;
 }
 
+
+sub PrepareBinaryCommandHead {
+
+    my $self       = shift;
+    my $msgid      = $_[0];
+    my $parameters = $_[1];
+    my $disc = $_[2];
+    my $data;
+
+    my $pkt = $parameters;
+
+    my $cmd_data = $self->BuildRawPacket( $msgid, $pkt );
+
+    $self->{socket}->send($cmd_data);
+    if($disc)
+    {
+        print "Force disconnecting\n";
+        exit 0;
+    }
+    my $reply_head = $self->GetReplyHead();
+    return $reply_head;
+}
+
 sub PrepareGenericCommand {
     my $self       = shift;
     my $msgid      = $_[0];
@@ -591,16 +639,14 @@ sub PrepareGenericCommand {
         my $json;
 
 		eval {
-     		# code that might throw exception
+            # code that might throw exception
 			$out =~ s/[[:^print:]\s]//g;
 			$json = decode_json($out);
 		};
 		if ($@) {
-    		# report the exception and do something about it
+            # report the exception and do something about it
 			print "decode_json exception. data:" . $out ."\n";
 		}
-
-
 
         my $code = $json->{'Ret'};
 
@@ -616,6 +662,46 @@ sub PrepareGenericCommand {
 
     return undef;
 }
+
+
+sub PrepareBinaryCommand {
+    my $self       = shift;
+    my $msgid      = $_[0];
+    my $parameters = $_[1];
+    my $disc = $_[2];
+
+    my $reply_head = $self->PrepareBinaryCommandHead($msgid, $parameters, $disc);
+    my $out = $self->GetReplyData($reply_head);
+
+    if ($out) {
+        $self->{raw_data} = $out;
+        my $json;
+
+		eval {
+            # code that might throw exception
+			$out =~ s/[[:^print:]\s]//g;
+			$json = decode_json($out);
+		};
+		if ($@) {
+            # report the exception and do something about it
+			print "decode_json exception. data:" . $out ."\n";
+		}
+
+        my $code = $json->{'Ret'};
+
+        if ( defined($code) ) {
+            if ( defined( $error_codes{$code} ) ) {
+                $json->{'RetMessage'} = $error_codes{$code};
+            }
+        }
+
+        return $json;
+
+    }
+
+    return undef;
+}
+
 
 sub PrepareGenericStreamDownloadCommand {
     my $self       = shift;
@@ -1521,6 +1607,29 @@ elsif ( $cfgCmd eq "ConfigExport" ) {
     }
 
     $decoded = $dvr->ConfigExport($filename);
+
+} elsif ( $cfgCmd eq "ConfigImport" ) {
+
+    if ($cfgInputFile) {
+
+        open(IN, $cfgInputFile);
+        my $cfgdata ;
+        while(<IN>) {
+            $cfgdata .= $_;
+        }
+        close(IN);
+
+        if ($cfgdata =~ /^PK/) {
+            print STDERR "Config verify ok\n";
+        } else {
+            print STDERR "Bad config format\n";
+        }
+
+        $decoded = $dvr->PrepareBinaryCommand(IPcam::CONFIG_IMPORT_REQ, $cfgdata);
+
+    } else {
+        print "Usage: -c ConfigImport -if <path to config file>\n";
+    }
 }
 elsif ( $cfgCmd eq "OEMInfo" ) {
     $decoded = $dvr->CmdOEMInfo();
@@ -1750,7 +1859,22 @@ elsif ( $cfgCmd eq "ConfigGet" ) {
 } elsif ($cfgCmd eq "Reboot") {
 
    $decoded = $dvr->PrepareGenericCommand(IPcam::SYSMANAGER_REQ, {Name => "OPMachine", OPMachine => { Action => "Reboot" }});
-   # try Action => 'Shutdown'
+
+} elsif ($cfgCmd eq "Shutdown") {
+
+   $decoded = $dvr->PrepareGenericCommand(IPcam::SYSMANAGER_REQ, {Name => "OPMachine", OPMachine => { Action => "Shutdown" }});
+
+} elsif ($cfgCmd eq "OPNetModeSwitch") {
+    if ($cfgOption) {
+        $decoded = $dvr->PrepareGenericCommand(IPcam::SYSMANAGER_REQ, {
+            Name => "OPNetModeSwitch",
+            OPNetModeSwitch => {
+                Action => "$cfgOption"
+            }
+        });
+    } else {
+        print "Usage: -c OPNetModeSwitch -co <network mode switch option>\n!!! WARNING !!! This could kill your camera network connection until restore factory settings!\n";
+    }
 
 } elsif ($cfgCmd eq "Upgrade") {
 
@@ -1803,8 +1927,6 @@ elsif ( $cfgCmd eq "User" ) {
         }
 
     }
-
-    #print Dumper $selected_group;
 
     if ( defined($selected_group) && defined($cfgModUserName) ) {
         my $pkt = {
@@ -2191,7 +2313,7 @@ DVR/NVR/IPC CMS port
 
 =item B<-c>
 
-DVR/NVR/IPC command: OPTimeSetting, Users, Groups, WorkState, StorageInfo, SystemInfo, SystemFunction, OEMInfo, LogExport, BrowserLanguage, ConfigExport, CustomExport, OPStorageManagerClear, OPFileQuery, OPLogQuery, OPVersionList, ConfigGet, AuthorityList, OPTimeQuery, Ability, User, DeleteUser, BrowserLanguage, ChannelTitle, ConfigSet, ChannelTitleSet, Reboot, Upgrade, ProbeCommand, ProbeCommandRaw, OPTelnetControl
+DVR/NVR/IPC command: OPTimeSetting, Users, Groups, WorkState, StorageInfo, SystemInfo, SystemFunction, OEMInfo, LogExport, BrowserLanguage, ConfigExport, ConfigImport, sCustomExport, OPStorageManagerClear, OPFileQuery, OPLogQuery, OPVersionList, ConfigGet, AuthorityList, OPTimeQuery, Ability, User, DeleteUser, BrowserLanguage, ChannelTitle, ConfigSet, ChannelTitleSet, Reboot, Upgrade, ProbeCommand, ProbeCommandRaw, OPTelnetControl
 
 =item B<-bt>
 
