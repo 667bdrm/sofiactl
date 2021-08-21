@@ -46,6 +46,8 @@ if ( !can_load( modules => $use_list, autoload => true ) ) {
     exit(1);
 }
 
+use JSON::XS::Boolean;
+
 use constant {
     LOGIN_REQ1      => 999,
     LOGIN_REQ2      => 1000,
@@ -1876,6 +1878,36 @@ elsif ( $cfgCmd eq "ConfigGet" ) {
         print "Usage: -c OPNetModeSwitch -co <network mode switch option>\n!!! WARNING !!! This could kill your camera network connection until restore factory settings!\n";
     }
 
+} elsif ($cfgCmd eq "OPDefaultConfig") {
+    my %allopts = (
+        "Account" => JSON::XS::false,
+        "Alarm" => JSON::XS::false,
+        "CameraPARAM" => JSON::XS::false,
+        "CommPtz" => JSON::XS::false,
+        "Encode" => JSON::XS::false,
+        "Factory" => JSON::XS::false,
+        "General" => JSON::XS::false,
+        "NetCommon" => JSON::XS::false,
+        "NetServer" => JSON::XS::false,
+        "Preview" => JSON::XS::false,
+        "Record" => JSON::XS::false
+    );
+    my $items = join(',', (keys %allopts));
+
+    if ($cfgOption) {
+       my @resetopts = split(',', $cfgOption);
+
+       foreach my $resetopt (@resetopts) {
+           $allopts{$resetopt} = JSON::XS::true;
+       }
+
+       $decoded = $dvr->PrepareGenericCommand(IPcam::SYSMANAGER_REQ, {Name => "OPDefaultConfig", OPDefaultConfig => \%allopts});
+
+    } else {
+        print "Usage: -c OPDefaultConfig -co <comma separated items to reset>\nExample: $items\n!!! WARNING !!! This could kill your camera network connection!\n";
+    }
+
+
 } elsif ($cfgCmd eq "Upgrade") {
 
 	$dvr->CmdUpgrade($cfgInputFile);
@@ -2313,7 +2345,7 @@ DVR/NVR/IPC CMS port
 
 =item B<-c>
 
-DVR/NVR/IPC command: OPTimeSetting, Users, Groups, WorkState, StorageInfo, SystemInfo, SystemFunction, OEMInfo, LogExport, BrowserLanguage, ConfigExport, ConfigImport, sCustomExport, OPStorageManagerClear, OPFileQuery, OPLogQuery, OPVersionList, ConfigGet, AuthorityList, OPTimeQuery, Ability, User, DeleteUser, BrowserLanguage, ChannelTitle, ConfigSet, ChannelTitleSet, Reboot, Upgrade, ProbeCommand, ProbeCommandRaw, OPTelnetControl
+DVR/NVR/IPC command: OPTimeSetting, OPDefaultConfig, Users, Groups, WorkState, StorageInfo, SystemInfo, SystemFunction, OEMInfo, LogExport, BrowserLanguage, ConfigExport, ConfigImport, sCustomExport, OPStorageManagerClear, OPFileQuery, OPLogQuery, OPVersionList, ConfigGet, AuthorityList, OPTimeQuery, Ability, User, DeleteUser, BrowserLanguage, ChannelTitle, ConfigSet, ChannelTitleSet, Reboot, Upgrade, ProbeCommand, ProbeCommandRaw, OPTelnetControl
 
 =item B<-bt>
 
@@ -2338,6 +2370,8 @@ Config option: Sections:  AVEnc, AVEnc.VideoWidget, AVEnc.SmartH264V2.[0], Abili
 Ability options: SystemFunction, AHDEncodeL, BlindCapability, Camera, Encode264ability, MultiLanguage, MultiVstd, SupportExtRecord, VencMaxFps
 
 OPTelnetControl options: TelnetEnable, TelnetDisEnable
+
+OPDefaultConfig option: CommPtz,Record,NetServer,CameraPARAM,Account,Encode,General,NetCommon,Factory,Preview,Alarm
 
 =item N<-username>
 

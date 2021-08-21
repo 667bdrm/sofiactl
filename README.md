@@ -50,6 +50,7 @@ EncryptionInfo | Get encryption public key and alogrithm info on some devices
 OPTelnetControl | Control telnet functionality (not tested!). Options: TelnetEnable, TelnetDisEnable - !!!DANGER!!! there are info that TelnetDisEnable disable telnet forever if succeed.
 OPGetCustomData | Get channel custom data
 OPSetCustomData | Set channel custom data
+OPDefaultConfig | Reset the comma separated configuration sections specified by --co parameter to default settings (Preview,CommPtz,General,Account,NetCommon,Record,Encode,NetServer,Factory,CameraPARAM,Alarm)
 
 parameters:
 
@@ -67,7 +68,7 @@ parameters:
 --ch | Channel
 --co | Config option. Sections:  AVEnc, AVEnc.VideoWidget, AVEnc.SmartH264V2.[0], Ability, Alarm, BrowserLanguage, Detect, General, General.AutoMaintain, General.General, General.Location, Guide, NetWork, NetWork.DigManagerShow, NetWork.OnlineUpgrade, NetWork.Wifi, Profuce, Record, Status.NatInfo, Storage, System, fVideo, fVideo.GUISet, Uart. Subsection could be requested in as object property, example: Uart.Comm; Ability options: SystemFunction, Camera, Ability options: SystemFunction, BlindCapability, Camera, Encode264ability, MultiLanguage, MultiVstd, SupportExtRecord, VencMaxFps
 --dl | Download found files
---c | DVR/NVR/IPC command: OPTimeSetting, Users, Groups, WorkState, StorageInfo, SystemInfo, OEMInfo, LogExport, ConfigExport, ConfigImport, CustomExport, OPStorageManagerClear, OPStorageManagerRO, OPStorageManagerRW, OPVersionList, OPFileQuery, OPLogQuery, ConfigGet, AuthorityList, OPTimeQuery, Ability, User, DeleteUser, ChannelTitle, ProbeCommand, ProbeCommandRaw
+--c | DVR/NVR/IPC command: OPTimeSetting, OPDefaultConfig, Users, Groups, WorkState, StorageInfo, SystemInfo, OEMInfo, LogExport, ConfigExport, ConfigImport, CustomExport, OPStorageManagerClear, OPStorageManagerRO, OPStorageManagerRW, OPVersionList, OPFileQuery, OPLogQuery, ConfigGet, AuthorityList, OPTimeQuery, Ability, User, DeleteUser, ChannelTitle, ProbeCommand, ProbeCommandRaw
 --username | Name of user to add/edit/delete
 --newuserpass | Password for new user
 --newusergroup | Group of new user. Must exists, permissions (authorities) will be copied from that group
