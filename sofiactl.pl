@@ -208,6 +208,8 @@ use constant {
     OPTUPDATA2_RSP => 1613, # OPTUpData
     UNKNOWN_SEARCH_REQ => 1636,
     UNKNOWN_SEARCH_RSP => 1637,
+    OPNETFILECONTRAL_REQ => 1642,
+    OPNETFILECONTRAL_RSP => 1643,
     UNKNOWN_CUSTOM_EXPORT_REQ => 1644, # Custom zipped configs, maybe OEM
     VERSION_LIST_REQ => 2000,
     VERSION_LIST_RSP => 2001, # props: VersionDate, VersionName
@@ -236,6 +238,8 @@ use constant {
     OPGETACTIVATIONCODE_RSP => 2219,
     OPCTRLDVRINFO_REQ => 2220,
     OPCTRLDVRINFO_RSP => 2221,
+    OPFILE_REQ => 3502,
+    OPFILE_RSP => 3503,
 };
 
 %error_codes = (
@@ -1914,6 +1918,10 @@ elsif ( $cfgCmd eq "ConfigGet" ) {
     }
 
 
+} elsif ($cfgCmd eq "OPLogManager") {
+
+   $decoded = $dvr->PrepareGenericCommand(IPcam::SYSMANAGER_REQ, {Name => "OPLogManager", OPLogManager => { Action => "RemoveAll" }});
+
 } elsif ($cfgCmd eq "Upgrade") {
 
 	$dvr->CmdUpgrade($cfgInputFile);
@@ -2253,6 +2261,40 @@ elsif ( $cfgCmd eq "OPMonitor" ) {
         OPSetCustomData => {
             Channel => int($cfgChannel),
             Data => $cfgSetData,
+        }
+    });
+
+    if ($dvr->{debug} eq 0) {
+        print $dvr->DumpJsonObject($decoded);
+    }
+} elsif ( $cfgCmd eq "OPFile" ) {
+    $decoded = $dvr->PrepareGenericCommand(IPcam::OPFILE_REQ, {
+        Name => 'OPFile',
+        OPFile => {
+            FileName => $cfgOption, # OpenIPAdaptive, MirrorOnFlag, FlipOnFlag, IRCutReverseFlag, customAlarmVoice.pcm
+            #FileSize => 0,
+        }
+    });
+
+    if ($dvr->{debug} eq 0) {
+        print $dvr->DumpJsonObject($decoded);
+    }
+} elsif ( $cfgCmd eq "OPNetFileContral" ) {
+    $decoded = $dvr->PrepareGenericCommand(IPcam::OPNETFILECONTRAL_REQ, {
+        Name => 'OPNetFileContral',
+        OPNetFileContral => {
+            iAction => 'RunTimeClear',
+        }
+    });
+
+    if ($dvr->{debug} eq 0) {
+        print $dvr->DumpJsonObject($decoded);
+    }
+} elsif ( $cfgCmd eq "OPSystemDebug" ) {
+    $decoded = $dvr->PrepareGenericCommand(IPcam::SYSTEM_DEBUG_REQ, {
+        Name => 'DebugCamera',
+        DebugCamera => {
+            DebugCameraSaveCmd => '',
         }
     });
 

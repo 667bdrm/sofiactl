@@ -51,8 +51,8 @@ OPTelnetControl | Control telnet functionality (not tested!). Options: TelnetEna
 OPGetCustomData | Get channel custom data
 OPSetCustomData | Set channel custom data
 OPDefaultConfig | Reset the comma separated configuration sections specified by --co parameter to default settings (Preview,CommPtz,General,Account,NetCommon,Record,Encode,NetServer,Factory,CameraPARAM,Alarm)
-OPNetModeSwitch | Switch networking mode for wireless devices to the specified by 
---co parameter. Options: ToAP - disconnect from wlan, enable configuration access point. ToRoute - disable configuration access point, connect to configured WLAN (!!! WARNING !!! you will lose the control if not configured access point)
+OPNetModeSwitch | Switch networking mode for wireless devices to the specified by --co parameter. Options: ToAP - disconnect from wlan, enable configuration access point. ToRoute - disable configuration access point, connect to configured WLAN (!!! WARNING !!! you will lose the control if not configured access point)
+OPLogManager | Remove all logs
 
 parameters:
 
