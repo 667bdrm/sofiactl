@@ -792,19 +792,7 @@ sub md5basedHash {
 
     my $msg_md5 = md5($message);
 
-    if ( $self->{debug} ne 0 ) {
-        print md5_hex($message) . "\n";
-    }
-
     my @hash = unpack( 'C*', $msg_md5 );
-
-    if ( $self->{debug} ne 0 ) {
-        for my $chr (@hash) {
-            print sprintf( "%02x ", $chr );
-        }
-
-        print "\n";
-    }
 
     for ( my $i = 0 ; $i < 8 ; $i++ ) {
         my $n = ( $hash[ 2 * $i ] + $hash[ 2 * $i + 1 ] ) % 0x3e;
@@ -821,15 +809,7 @@ sub md5basedHash {
             $n += 0x30;
         }
 
-        if ( $self->{debug} ne 0 ) {
-            print "$n\n";
-        }
-
         $hash .= chr($n);
-    }
-
-    if ( $self->{debug} ne 0 ) {
-        print "hash = $hash\n";
     }
 
     return $hash;
