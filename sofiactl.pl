@@ -433,20 +433,13 @@ sub BuildRawPacket {
 
     $pkt_type = $type;
 
-    my $msgid = pack( 's', 0 ) . pack( 's', $pkt_type );
+    my $msgid = pack('S', 0) . pack('S', $pkt_type);
 
-    my $pkt_prefix_data =
-        pack( 'c*', @pkt_prefix_1 )
-      . pack( 'i', $self->{sid} )
-      . pack( 'i', $self->{sequence} )
-      . $msgid;
+    my $pkt_prefix_data =  pack('C*', @pkt_prefix_1) . pack('I', $self->{sid}) . pack('I', $self->{sequence}) . $msgid;
 
-    my $pkt_data =
-        $pkt_prefix_data
-      . pack( 'i', length($params) )
-      . $params;
+    my $pkt_data = $pkt_prefix_data. pack('I', length($params)) . $params;
 
-    $self->{lastcommand} = $params->{Name} . sprintf( " msgid = %d", $pkt_type );
+    $self->{lastcommand} = $params->{Name} . sprintf(" msgid = %d", $pkt_type);
     $self->{sequence} += 1;
 
     return $pkt_data;
@@ -1436,7 +1429,7 @@ my $cfgFile         = "";
 my $cfgUser         = "";
 my $cfgPass         = "";
 my $cfgHost         = "";
-my $cfgPort         = "";
+my $cfgPort         = 34567;
 my $cfgCmd          = undef;
 my $cfgHashType     = "md5based";
 my $cfgDebug        = 0;
@@ -1483,8 +1476,8 @@ my $result = GetOptions(
 
 pod2usage(1) if ($help);
 
-if ( !( $cfgHost or $cfgPort or $cfgUser ) ) {
-    print STDERR "You must set user, host and port!\n";
+if ( !( $cfgHost or $cfgUser ) ) {
+    print STDERR "You must set user and host!\n";
     pod2usage(1);
     exit(0);
 }
@@ -2281,6 +2274,57 @@ elsif ( $cfgCmd eq "OPMonitor" ) {
     if ($dvr->{debug} eq 0) {
         print $dvr->DumpJsonObject($decoded);
     }
+} elsif ($cfgCmd eq "Talk" ) {
+
+    $decoded = $dvr->PrepareGenericCommand(IPcam::TALK_CLAIM, {
+        Name => 'OPTalk',
+        OPTalk => {
+            Action => "Claim",
+            AudioFormat => {
+                BitRate => 519788,
+                EncodeType => "G711_ALAW",
+                SampleBit => 8,
+                SampleRate => 8
+            }
+        }
+    });
+
+
+    $decoded = $dvr->PrepareGenericCommand(IPcam::TALK_REQ, {
+        Name => 'OPTalk',
+        OPTalk => {
+            Action => "Start",
+            AudioFormat => {
+                BitRate => 128,
+                EncodeType => "G711_ALAW",
+                SampleBit => 8,
+                SampleRate => 8000
+            }
+        }
+    });
+
+
+
+    if ($cfgInputFile ne '') {
+        my $size = -s $cfgInputFile;
+        print "File size: $size\n";
+        my $count = 0;
+        open(IN, "< $cfgInputFile");
+        while ($count < $size) {
+            my $data;
+            read(IN, $data, 320);
+            #print $data . "\n";
+            $count += 320;
+            my $audio_pkt = $dvr->BuildRawPacket(IPcam::TALK_CU_PU_DATA, pack('CCCCCCS', (0x00, 0x00, 0x01, 0xFA, 0x0E, 0x02, 320)) . $data);
+            $dvr->{socket}->send($audio_pkt);
+
+            my $reply_head = $dvr->GetReplyHead();
+            $dvr->GetReplyData($reply_head);
+        }
+        close(IN);
+
+        sleep(10);
+    }
 }
 
 #$decoded = $dvr->PrepareGenericCommand(IPcam::OPPGSGETIMG_REQ, {
@@ -2295,6 +2339,8 @@ elsif ( $cfgCmd eq "OPMonitor" ) {
 #});
 
 print $dvr->DumpJsonObject($decoded) if ($cfgDebug ne 0);
+
+print $decoded->{RetMessage} . "\n";
 
 #my $decoded = $dvr->CmdAlarmInfo({
 #     Channel => 0,
@@ -2328,6 +2374,8 @@ print $dvr->DumpJsonObject($decoded) if ($cfgDebug ne 0);
 #print Dumper $decoded;
 
 $dvr->disconnect();
+
+exit($decoded->{Ret});
 
 __END__
 
@@ -2373,7 +2421,7 @@ DVR/NVR/IPC CMS port
 
 =item B<-c>
 
-DVR/NVR/IPC command: OPTimeSetting, OPDefaultConfig, Users, Groups, WorkState, StorageInfo, SystemInfo, SystemFunction, OEMInfo, LogExport, BrowserLanguage, ConfigExport, ConfigImport, sCustomExport, OPStorageManagerClear, OPFileQuery, OPLogQuery, OPVersionList, ConfigGet, AuthorityList, OPTimeQuery, Ability, User, DeleteUser, BrowserLanguage, ChannelTitle, ConfigSet, ChannelTitleSet, Reboot, Upgrade, ProbeCommand, ProbeCommandRaw, OPTelnetControl
+DVR/NVR/IPC command: OPTimeSetting, OPDefaultConfig, Users, Groups, WorkState, StorageInfo, SystemInfo, SystemFunction, OEMInfo, LogExport, BrowserLanguage, ConfigExport, ConfigImport, sCustomExport, OPStorageManagerClear, OPFileQuery, OPLogQuery, OPVersionList, ConfigGet, AuthorityList, OPTimeQuery, Ability, User, DeleteUser, BrowserLanguage, ChannelTitle, ConfigSet, ChannelTitleSet, Reboot, Upgrade, ProbeCommand, ProbeCommandRaw, OPTelnetControl, Talk
 
 =item B<-bt>
 

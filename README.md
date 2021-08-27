@@ -43,6 +43,7 @@ ChannelTitle | Show channel titles
 ChannelTitleSet | Set channel titles. Pass comma separated channel titles for all device channels
 ConfigSet | Set configuration section (--co) value from set data (--sd) or  input json file (--if). WARNING!!! There are reports about settings break using thius command. Hold on with use this option until resolution confirm.
 Reboot | Reboot the device
+Talk | Play file specified by --if parameter for the devices supporting talk feature. File must be in headless G711 alaw format. Use snd2pcm.sh for conversion.
 Upgrade | Upgrade the device firmware. Firmware file name should be passed with (--if) parameter.
 ProbeCommand | !!! DANGER !!! Execute custom protocol command (2 byte message id) specified by --co parameter, response will be decoded from json
 ProbeCommandRaw | !!! DANGER !!! Execute custom protocol command (2 byte message id) specified by --co parameter, response will be dumped as-is to file
