@@ -1,0 +1,16 @@
+[Unit]
+Description=DVR Alarm Receiver for XM IPC/DVR
+Documentation=man:rsyslogd(8)
+
+[Service]
+Type=simple
+ExecStart=/usr/local/sbin/dvr-alarm-server.pl -mqtthost localhost
+ExecStop=/usr/bin/killall dvr-alarm-server.pl
+StandardOutput=null
+Restart=on-failure
+OOMScoreAdjust=1000
+
+
+[Install]
+WantedBy=multi-user.target
+Alias=dvr-alarm-server.service
