@@ -114,8 +114,9 @@ types:
       - id: timestamp
         size: 4
         type: timestamp
-      - id: length
+      - id: total_length
         type: u4
+        doc: includes next frames data too
       - id: data
         size-eos: true
 

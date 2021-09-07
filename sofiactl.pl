@@ -832,6 +832,19 @@ sub ParseTimestamp {
     return $timestamp;
 }
 
+sub MediaTimestampDecode {
+    my $self = shift;
+    my $timestamp = $_[0];
+    my $year =  ($timestamp >> 26) + 2000;
+    my $month = ($timestamp & 0x03c00000) >> 22;
+    my $day = ($timestamp & 0x003e0000) >> 17;
+    my $hour = ($timestamp & 0x0001f000) >> 12;
+    my $min = ($timestamp & 0x00000fc0) >> 6;
+    my $sec = $timestamp & 0x0000003f;
+
+    return sprintf("%4d-%02d-%02d %02d:%02d:%02d", $year, $month, $day, $hour, $min, $sec);
+}
+
 sub CmdLogin {
     my $self = shift;
 
@@ -986,12 +999,13 @@ sub CmdKeepAlive {
     return $self->PrepareGenericCommand( KEEPALIVE_REQ, $pkt );
 }
 
-sub CmdOPMonitorClaim {
+sub CmdOPMonitor {
     my $self = shift;
+    my $mode = $_[0];
+    my $limit = 0;
 
-    my $pkt = {
-        Name      => 'OPMonitor',
-        SessionID => $self->BuildPacketSid(),
+    $decoded = $self->PrepareGenericCommand(IPcam::MONITOR_CLAIM, {
+        Name => 'OPMonitor',
         OPMonitor => {
             Action    => "Claim",
             Parameter => {
@@ -1001,24 +1015,120 @@ sub CmdOPMonitorClaim {
                 TransMode  => "TCP"
             }
         }
-    };
+    });
 
-    my $cmd_data = $self->BuildPacket( MONITOR_CLAIM, $pkt );
+    if ($decoded->{Ret} == 100) {
+        my $monitor_pkt = $self->BuildPacket(IPcam::MONITOR_REQ, {
+            Name => 'OPMonitor',
+            OPMonitor => {
+                Action    => "Start",
+                Parameter => {
+                    Channel    => 0,
+                    CombinMode => "NONE",
+                    StreamType => "Extra1",
+                    TransMode  => "TCP"
+                }
+            }
+        });
 
-    $self->{socket}->send($cmd_data);
+        $self->{socket}->send($monitor_pkt);
 
-    my $reply = $self->GetReplyHead();
+        for (my $i = 0; ($i < $limit || $limit == 0); $i++) {
+            my $reply_head = $self->GetReplyHead();
 
-    #for my $k (keys %{$reply}) {
-    #  print "rh = $k\n";
-    #}
+            open(TMP, "> tmp-$i.dat");
 
-    # my $out = $self->GetReplyData($reply);
-    my $out1 = decode_json($reply);
+            if ($reply_head->{MessageId} eq IPcam::MONITOR_DATA) {
+                print "media frame\n" if ($self->{debug} eq 1);
 
-    # $self->{socket}->recv($data, 1);
+                my $out = '';
 
-    return $out1;
+                my $datalen = $reply_head->{Content_Length};
+                my $monitor_data = $self->GetReplyData($reply_head);
+                my $firstbytes = unpack('A3', $monitor_data);
+
+                if ($firstbytes eq "\x00\x00\x01") {
+                    my ($firstbytes, $frame_type) = unpack('A3CC', $monitor_data);
+
+                    if ($frame_type == 0xfc) {
+                        my ($firstbytes, $frame_type, $type, $frame_rate, $width, $height, $timestamp, $total_size, @framedata) = unpack('A3CCCCCIIC*', $monitor_data);
+
+                        my $codec = 'unknown';
+
+                        if ($type == 0x01) {
+                            $codec = 'mpeg4';
+                        } else {
+                            $codec = 'h264';
+                        }
+
+                        $codec .= sprintf(' (0x%x)', $type);
+                        if ($self->{debug} eq 1) {
+                            print sprintf("video_iframe codec = %s frame_rate = %d width = %d height = %d timestamp = %s total_size = %d\n", $codec, $frame_rate, $width, $height, $self->MediaTimestampDecode($timestamp), $total_size);
+                        }
+
+                        foreach my $framebyte (@framedata) {
+                            $out .= pack('C', $framebyte);
+                            print TMP pack('C', $framebyte);
+                            if ($mode eq 'video') {
+                                print pack('C', $framebyte);
+                            }
+                        }
+
+                    } elsif ($frame_type == 0xfd) {
+                        print "video_pframe\n" if ($self->{debug} eq 1);
+                        my ($firstbytes, $frame_type, $size, @framedata) = unpack('A3CIC*', $monitor_data);
+
+                        print sprintf("video_pframe size = %d\n", $size) if ($self->{debug} eq 1);
+
+                        foreach my $framebyte (@framedata) {
+                            $out .= pack('C', $framebyte);
+                            print TMP pack('C', $framebyte);
+                            if ($mode eq 'video') {
+                                print pack('C', $framebyte);
+                            }
+                        }
+                    } elsif ($frame_type == 0xf9) {
+                        print "car_info\n" if ($self->{debug} eq 1);
+                    } elsif ($frame_type == 0xfa) {
+                        print "audio\n" if ($self->{debug} eq 1);
+                        my ($firstbytes, $frame_type, $audio_codec, $sampling, $size, @framedata) = unpack('A3CCCSC*', $monitor_data);
+                        my $audio_codec_str = 'unknown';
+                        my $sampling_str = 'unknown';
+
+                        if ($audio_codec == 0x0e) {
+                            $audio_codec_str = 'G711A';
+                        }
+
+                        if ($sampling == 0x02) {
+                            $sampling_str = '8K';
+                        }
+
+                        print sprintf("audio codec = %s sampling = %s size = %d\n", $audio_codec_str, $sampling_str, $size) if ($self->{debug} eq 1);
+
+                        foreach my $framebyte (@framedata) {
+                            $out .= pack('C', $framebyte);
+                            print TMP pack('C', $framebyte);
+                            if ($mode eq 'audio') {
+                                print pack('C', $framebyte);
+                            }
+                        }
+                    } elsif ($frame_type == 0xfe) {
+                        print "image\n" if ($self->{debug} eq 1);
+                    } else {
+                        print sprintf("unknown frame type = 0x%x\n", $frame_type) if ($self->{debug} eq 1);
+                    }
+                } else {
+                    print "outstanding data of previous packet\n" if ($self->{debug} eq 1);
+                    $out = $monitor_data;
+                    if ($mode eq 'video') {
+                        print $out;
+                    }         
+                }
+            }
+
+            close(TMP);
+        }
+    }
 }
 
 sub CmdOPMonitorStop {
@@ -1051,63 +1161,6 @@ sub CmdOPMonitorStop {
     my $out1 = decode_json($out);
 
     # $self->{socket}->recv($data, 1);
-
-    return $out1;
-}
-
-sub CmdOPMonitorStart {
-    my $self = shift;
-    my $data;
-
-    my $pkt = {
-        Name      => 'OPMonitor',
-        SessionID => $self->BuildPacketSid(),
-        OPMonitor => {
-            Action    => "Start",
-            Parameter => {
-                Channel    => 0,
-                CombinMode => "NONE",
-                StreamType => "Extra1",
-                TransMode  => "TCP"
-            }
-        }
-    };
-
-    my $cmd_data = $self->BuildPacket( MONITOR_REQ, $pkt );
-
-    $self->{socket}->send($cmd_data);
-
-    open( OUT, ">> " . $self->{sid} . ".h264" );
-
-    $stop = 0;
-
-    while ( defined( my $reply = $self->GetReplyHead() ) and $stop == 0 ) {
-        if ( sprintf( "%x", $reply->{Data1} ) ne "12ff" ) {
-
-            for my $k ( keys %{$reply} ) {
-                print "rh = $k\n";
-            }
-
-            print "Content_Length = " . $reply->{Content_Length} . "\n";
-
-            my $out = $self->GetReplyData($reply);
-            print OUT $out;
-
-            if ( $reply->{Sequence} > 3 ) {
-
-                #$stop = 1;
-                $self->CmdKeepAlive();
-            }
-
-        }
-        else {
-            $stop = 1;
-            break;
-        }
-
-    }
-
-    close(OUT);
 
     return $out1;
 }
@@ -1153,7 +1206,6 @@ sub CmdOPTimeSetting {
     return undef;
 }
 
-#buggy
 sub CmdSystemFunction {
     my $self = shift;
 
@@ -2014,85 +2066,17 @@ elsif ( $cfgCmd eq "ConfigSet" ) {
 }
 elsif ( $cfgCmd eq "OPMonitor" ) {
 
-    #  $decoded = $dvr->PrepareGenericCommand(IPcam::MONITOR_CLAIM, {
-    #	    Name => "OPMonitor",
-    #	    OPMonitor => {
-    #      	  Action => "Claim",
-    #      	  Parameter => {
-    #	        Channel => $cfgChannel,
-    #	        CombinMode => "NONE",
-    #			StreamType => "Main",
-    #	        TransMode => "TCP",
-    #     	  }
-    #		}
-    #  });
-    #$decoded = $dvr->CmdOPMonitorClaim();
-
-    $decoded = $dvr->CmdSystemInfo();
-
-    if ( $decoded->{'Ret'} eq "100" ) {
-        print "SystemInfo ok\n";
+    if ($cfgOption) {
+        $mode = $cfgOption;
+        $dvr->CmdOPMonitor($mode);
+    } else {
+        print "Usage:\n";
+        print "Play video: -c OPMonitor -co video | ffplay -i - -vcodec h264\n";
+        print "Play audio: -c OPMonitor -co audio | play -t al -r 8000 -c 1 -\n";
+        print "Play audio using ffmpeg: -c OPMonitor -co audio | ffplay -i - -f alaw -ar 8000\n";
     }
 
-    $decoded = $dvr->CmdOPTimeSetting(1);
-
-    $decoded = $dvr->PrepareGenericCommand( IPcam::GUARD_REQ, { Name => "" } );
-
-    if ( $decoded->{'Ret'} eq "100" ) {
-        print "Guard ok\n";
-    }
-
-    $decoded = $dvr->PrepareGenericCommand( IPcam::CONFIG_CHANNELTILE_GET,
-        { Name => "ChannelTitle" } );
-
-    if ( $decoded->{'Ret'} eq "100" ) {
-        print "Channel title ok\n";
-    }
-
-    $decoded = $dvr->PrepareGenericCommand( IPcam::ABILITY_GET,
-        { Name => "TalkAudioFormat" } );
-
-    if ( $decoded->{'Ret'} eq "100" ) {
-        print "TalkAudioFormat ok\n";
-    }
-
-    $decoded = $dvr->PrepareGenericCommand( IPcam::ABILITY_GET,
-        { Name => "SystemFunction" } );
-
-    if ( $decoded->{'Ret'} eq "100" ) {
-        print "SystemFunction ok\n";
-
-        #print Dumper $decoded;
-    }
-
-    $decoded = $dvr->CmdKeepAlive();
-
-    print Dumper $decoded if ($cfgDebug ne 0);
-
-    if ( $decoded->{'Ret'} eq "100" ) {
-        print "KeepAlive ok\n";
-
-        $decoded = $dvr->PrepareGenericCommand( IPcam::MONITOR_REQ,
-            {
-                Name      => "OPMonitor",
-                OPMonitor => {
-                    Action    => "Start",
-                    Parameter => {
-                        Channel    => int($cfgChannel),
-                        StreamType => "Main",
-                        TransMode  => "TCP"
-                    }
-                }
-            }
-        );
-
-        if ( $decoded->{'Ret'} eq "100" ) {
-            print "Monitor start confirm\n";
-
-        }
-
-    }
-
+    
 } elsif ($cfgCmd eq 'OPPTZControl') {
 
     # Direction commands:
@@ -2360,9 +2344,10 @@ elsif ( $cfgCmd eq "OPMonitor" ) {
 #    Name => 'OPGetPgsState',
 #});
 
-print $dvr->DumpJsonObject($decoded) if ($cfgDebug ne 0);
-
-print $decoded->{RetMessage} . "\n";
+if ($cfgCmd ne "OPMonitor") {
+    print $dvr->DumpJsonObject($decoded) if ($cfgDebug ne 0);
+    print $decoded->{RetMessage} . "\n";
+}
 
 #my $decoded = $dvr->CmdAlarmInfo({
 #     Channel => 0,
