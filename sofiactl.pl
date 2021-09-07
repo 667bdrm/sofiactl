@@ -1496,7 +1496,7 @@ my $cfgNewUserGroup = '';
 my $cfgNewUserPass  = '';
 my $cfgInputFile    = '';
 my $cfgSetData      = '';
-my $cfgPreset       = -1;
+my $cfgPreset       = 0;
 my $cfgJSONPretty   = 0;
 my $cfgForceDisc    = 0;
 
@@ -1523,7 +1523,7 @@ my $result = GetOptions(
     "newuserpass=s"     => \$cfgNewUserPass,
     "inputfile|if=s"    => \$cfgInputFile,
     "setdata|sd=s"      => \$cfgSetData,
-    "presetnumber|pn=s"    => \$cfgPreset,
+    "presetnumber|pn=s" => \$cfgPreset,
     "forcedisconn|fd"   => \$cfgForceDisc,
     "jsonpretty|jp"     => \$cfgJSONPretty,
 );
@@ -2094,7 +2094,7 @@ elsif ( $cfgCmd eq "OPMonitor" ) {
         $cfgSetData eq "ClearPreset"
     ){
         if($cfgPreset < 0){
-            print "Preset has to be >= 0. Using default value (0).";
+            print "Preset has to be >= 0. Using default value (0).\n";
             @presets = 0; # Preset lower than 0 defaults to 0.
         } else {
             @presets = $cfgPreset;
