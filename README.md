@@ -12,7 +12,7 @@ sofiactl.pl --user username --pass password --host 192.168.0.1 --port 34567 --co
 
 ALWAYS BACKUP your configuration with OEM CMS software before using this tool
 
-supported commands:
+### Supported commands
 
 |command | description |
 |--|--|
@@ -32,7 +32,7 @@ OPStorageManagerRO | Switch partition 0 to read-only mode (not tested!)
 OPStorageManagerRW | Switch partition 0 to read/write mode (not tested!)
 OPFileQuery | Search records. Requires --bt, --et, --ch parameters
 OPLogQuery | Search logs. Requires --bt, --et parameters
-OPPTZControl | Execute PTZ command. Reuires parameter --sd CommandName; available PTZ commands: DirectionRight, DirectionLeft, DirectionUp, DirectionDown, ZoomWide, ZoomTile, IrisLarge, IrisSmall, FocusNear, FocusFar
+OPPTZControl | Execute PTZ command. Requires parameter --sd CommandName; available PTZ commands: DirectionRight, DirectionLeft, DirectionUp, DirectionDown, ZoomWide, ZoomTile, IrisLarge, IrisSmall, FocusNear, FocusFar. These require also parameter --pn PresetNumber; SetPreset, GotoPreset, ClearPreset
 ConfigGet | Get configuration of specified by --co parameter section
 AuthorityList | Get authenticated user access permissions
 OPTimeQuery | Get device date and time
@@ -55,7 +55,7 @@ OPDefaultConfig | Reset the comma separated configuration sections specified by 
 OPNetModeSwitch | Switch networking mode for wireless devices to the specified by --co parameter. Options: ToAP - disconnect from wlan, enable configuration access point. ToRoute - disable configuration access point, connect to configured WLAN (!!! WARNING !!! you will lose the control if not configured access point)
 OPLogManager | Remove all logs
 
-parameters:
+### Parameters
 
 |parameter | description |
 |--|--|
@@ -77,6 +77,7 @@ parameters:
 --newusergroup | Group of new user. Must exists, permissions (authorities) will be copied from that group
 --if | Input file for setting data/to upgrade firmware from
 --sd | Set data
+--pn | Preset number (PTZ preset commands)
 --d | Debug output
 --jp | JSON pretty print
 --fd | Dsconnect immediately after sending the command without getting a reply
@@ -97,6 +98,8 @@ parameters:
 [USAFEQLO USA-IPT-Y307/335](http://www.aliexpress.com/item/4000078604009.html) (XiongMai, NRW4X-5274P-5X, XM530_80X50_8M)
 
 [GS-2AD178WTCMF/GS-2AD21WTC](https://www.aliexpress.com/item/4001221668994.html) (XiongMai, 50X20-WG, XM530_50X20-WG_8M)
+
+[ANBIUX 3MP Outdoor IP Camera](https://www.aliexpress.com/item/4000669887458.html) (XiongMai, R80X30-PQL, XM530_R80X30-PQL_8M)
 
 ## Author and License
 
