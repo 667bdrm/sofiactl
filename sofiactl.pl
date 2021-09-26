@@ -1496,6 +1496,7 @@ my $cfgNewUserGroup = '';
 my $cfgNewUserPass  = '';
 my $cfgInputFile    = '';
 my $cfgSetData      = '';
+my $cfgPreset       = 0;
 my $cfgJSONPretty   = 0;
 my $cfgForceDisc    = 0;
 
@@ -1522,6 +1523,7 @@ my $result = GetOptions(
     "newuserpass=s"     => \$cfgNewUserPass,
     "inputfile|if=s"    => \$cfgInputFile,
     "setdata|sd=s"      => \$cfgSetData,
+    "presetnumber|pn=s" => \$cfgPreset,
     "forcedisconn|fd"   => \$cfgForceDisc,
     "jsonpretty|jp"     => \$cfgJSONPretty,
 );
@@ -2077,15 +2079,35 @@ elsif ( $cfgCmd eq "OPMonitor" ) {
     
 } elsif ($cfgCmd eq 'OPPTZControl') {
 
-    # DirectionRight, DirectionLeft, DirectionUp, DirectionDown, 
+    # Direction commands:
+    # DirectionRight, DirectionLeft, DirectionUp, DirectionDown,
     # ZoomWide, ZoomTile, IrisLarge, IrisSmall, FocusNear, FocusFar
-    my $ptzDirection = $cfgSetData; 
 
-    foreach my $i (65535, -1) {
+    # Preset commands:
+    # GotoPreset, SetPreset, ClearPreset
+
+    my @presets;
+
+    if(
+        $cfgSetData eq "GotoPreset" ||
+        $cfgSetData eq "SetPreset" ||
+        $cfgSetData eq "ClearPreset"
+    ){
+        if($cfgPreset < 0){
+            print "Preset has to be >= 0. Using default value (0).\n";
+            @presets = 0; # Preset lower than 0 defaults to 0.
+        } else {
+            @presets = $cfgPreset;
+        }
+    } else {
+        @presets = (65535, -1);
+    }
+
+    foreach my $i (@presets) {
         $decoded = $dvr->PrepareGenericCommand( IPcam::PTZ_REQ, {
             Name => "OPPTZControl",
             OPPTZControl =>  {
-                Command => $ptzDirection,
+                Command => $cfgSetData,
                 Parameter => {
                     AUX => {
                         Number => 0,
@@ -2094,7 +2116,7 @@ elsif ( $cfgCmd eq "OPMonitor" ) {
                     Channel => int($cfgChannel),
                     MenuOpts => "Enter",
                     POINT => { "bottom" => 0, "left" => 0, "right" => 0, "top" => 0 },
-                    Pattern => "SetBegin",
+                    Pattern => "Start",
                     Preset => $i, # Preset: 65535 - start movement; -1 - stop movement
                     Step => 5,
                     Tour => 0
