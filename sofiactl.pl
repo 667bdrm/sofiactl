@@ -47,6 +47,7 @@ if ( !can_load( modules => $use_list, autoload => true ) ) {
 }
 
 use JSON::XS::Boolean;
+use JSON::XS;
 
 use constant {
     LOGIN_REQ1      => 999,
@@ -640,7 +641,7 @@ sub PrepareGenericCommand {
 		eval {
             # code that might throw exception
 			$out =~ s/[[:^print:]\s]//g;
-			$json = decode_json($out);
+			$json = JSON::XS::decode_json($out);
 		};
 		if ($@) {
             # report the exception and do something about it
